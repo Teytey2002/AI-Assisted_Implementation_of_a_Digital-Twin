@@ -1,0 +1,3 @@
+Ce Dataset est créé à partir du script python GenerateExp_FromTemplate.py 
+On prend un template et pour chaque nouvelle expérience, on fait varier la low pariode
+Dedans on a les 100 expériences qu'on va copier-coller dans le bon folder EcoSimpro pour faire la simulation 
