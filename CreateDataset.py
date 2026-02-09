@@ -3,8 +3,8 @@ from pathlib import Path
 import re
 
 # ========= CONFIG =========
-ROOT_DIR = Path("/mnt/c/Program Files/EcosimPro/STANDARD/libs/ELECTRICAL_EXAMPLES/experiments/+filter+examples.default_+l+p_+sensor/+l+p_+dataset")   # <-- dossier racine qui contient les sous-dossiers experiments
-OUT_DIR  = Path("./LP_Dataset_csv")          # <-- dossier unique où mettre tous les CSV
+ROOT_DIR = Path("/mnt/c/Program Files/EcosimPro/STANDARD/libs/ELECTRICAL_EXAMPLES/experiments/+filter+examples.default_+l+p_+sensor/+l+p_+dataset_+c_+modified")   # <-- dossier racine qui contient les sous-dossiers experiments
+OUT_DIR  = Path("./LP_Dataset_csv_C_Modified")          # <-- dossier unique où mettre tous les CSV
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 REQUIRED_COLUMNS = [

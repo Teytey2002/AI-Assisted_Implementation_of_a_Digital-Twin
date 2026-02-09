@@ -29,20 +29,20 @@ EXS_CONTENT = """<simulation_settings version="1.0">
 #    "experiments/+filter+examples.default_+l+p_+sensor/+l+p_+dataset"
 #)
 # Erreur, droit d'accès entre windows et wsl. Pour faire simple, on créer le dossier dans le répertoire actuel puis on déplace manuellement au bon endroit. 
-OUT_DIR = Path("/mnt/c/Users/theod/OneDrive/Documents/ULB/Ma2/TFE/AI-Assisted_Implementation_of_a_Digital-Twin/LP_Dataset")
+OUT_DIR = Path("/mnt/c/Users/theod/OneDrive/Documents/ULB/Ma2/TFE/AI-Assisted_Implementation_of_a_Digital-Twin/LP_Dataset_C_Modified")
 
 # Chemin du template .exp 
 TEMPLATE_EXP = Path(
     "/mnt/c/Program Files/EcosimPro/STANDARD/libs/ELECTRICAL_EXAMPLES/"
-    "experiments/+filter+examples.default_+l+p_+sensor/+l+p_+dataset/+l+p_+sensor_+template/+l+p_+sensor_+template.exp"
+    "experiments/+filter+examples.default_+l+p_+sensor/+l+p_+dataset_+c_+modified/+l+p_+template_+sensor_+c_+modified/+l+p_+template_+sensor_+c_+modified.exp"
 )
 
 # -----------------------------
 # 2) Sweep settings
 # -----------------------------
 FC = 5.0    # Fréquence de coupure
-F_MIN = FC / 10.0   # 0.5 Hz
-F_MAX = FC * 10.0   # 50 Hz
+F_MIN = FC / 10.0   
+F_MAX = FC * 10.0   
 N = 100     # Nb d'expérience voulu
 
 # -----------------------------
