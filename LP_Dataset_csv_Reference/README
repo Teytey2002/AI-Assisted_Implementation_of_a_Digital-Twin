@@ -8,3 +8,4 @@ Données du circuit :
 Resistor_1_1 = 10 000 Ohm
 Capacitor_1_1 = 3e-6 F
 Resistor_2_1 = 10 000 Ohm
+Fréquence de coupure = 5 Hz

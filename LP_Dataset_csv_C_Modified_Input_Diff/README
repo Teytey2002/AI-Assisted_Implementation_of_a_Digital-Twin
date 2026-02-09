@@ -1,0 +1,15 @@
+Dataset CSV qui reprend toutes les simulations où on fait varier uniquement le low periode. 
+Pour chaque expériments, on ne garde que 3 colonnes : 
+TIME,Addition_2.s_out.signal[1],SensorVoltage_1.v
+
+Ce qui nous donne un couple entrée sortie pour la calibration des paramètres par la suite
+
+Données du circuit : 
+Resistor_1_1 = 10 000 Ohm
+Capacitor_1_1 = 1.5e-6 F        # On divise de moitié celle du circuit de base 
+Resistor_2_1 = 10 000 Ohm
+Fréquence de coupure = 10 Hz     
+
+
+
+ATTENTION : Ici, on utilise la fréquence de coupure pour faire varier Fmax et Fmin depuis le script python. Ce qui signifie qu'on a des entrée différentes que dans la dataset de référence

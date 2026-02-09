@@ -1,3 +1,9 @@
 Ce Dataset est créé à partir du script python GenerateExp_FromTemplate.py 
 On prend un template et pour chaque nouvelle expérience, on fait varier la low pariode
 Dedans on a les 100 expériences qu'on va copier-coller dans le bon folder EcoSimpro pour faire la simulation 
+
+Données du circuit : 
+Resistor_1_1 = 10 000 Ohm
+Capacitor_1_1 = 3e-6 F
+Resistor_2_1 = 10 000 Ohm
+Fréquence de coupure = 5 Hz

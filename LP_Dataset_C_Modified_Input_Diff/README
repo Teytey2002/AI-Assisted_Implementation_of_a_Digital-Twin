@@ -1,0 +1,12 @@
+Ce Dataset est créé à partir du script python GenerateExp_FromTemplate.py 
+On prend un template et pour chaque nouvelle expérience, on fait varier la low pariode
+Dedans on a les 100 expériences qu'on va copier-coller dans le bon folder EcoSimpro pour faire la simulation 
+
+Attention, ici on modifie le C par rapport au circuit de référence 
+Données du circuit : 
+Resistor_1_1 = 10 000 Ohm
+Capacitor_1_1 = 1.5e-6 F        # Diviser de moitié par rapport au circuit de base
+Resistor_2_1 = 10 000 Ohm
+Fréquence de coupure = 10 Hz
+
+ATTENTION : Ici, on utilise la fréquence de coupure pour faire varier Fmax et Fmin depuis le script python. Ce qui signifie qu'on a des entrée différentes que dans la dataset de référence
