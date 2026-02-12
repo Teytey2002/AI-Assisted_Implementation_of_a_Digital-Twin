@@ -12,8 +12,8 @@ class SimulationResult:
     """
     Output of a simulation run.
     """
-    y: np.ndarray
-    aux: Dict[str, object]
+    y: np.ndarray           # signal simulate (y^^(t))
+    aux: Dict[str, object]  # data supp (not usefull for calibration, more usefull for debugging)
 
 
 class Simulator(ABC):
@@ -29,7 +29,7 @@ class Simulator(ABC):
       simulate(t, u, theta) returns y_pred aligned with t.
     """
 
-    @abstractmethod
+    @abstractmethod    # Why an abstract class (ABC)? An ABC imposes a rule: any class that inherits from Simulator MUST implement simulate.
     def simulate(self, t: np.ndarray, u: np.ndarray, theta: np.ndarray) -> SimulationResult:
         raise NotImplementedError
 
@@ -39,7 +39,7 @@ class ExampleRCCircuitSimulator(Simulator):
     Example placeholder: 1st-order RC low-pass discrete-time simulation.
 
     NOTE:
-      This is just a *template* to show structure. Replace with your real simulator
+      This is just a template to show structure. Replace with your real simulator
       (FMU, Modelica, etc.) as soon as available.
 
     Model:

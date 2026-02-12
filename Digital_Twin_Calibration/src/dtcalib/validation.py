@@ -13,9 +13,9 @@ from .simulation import Simulator
 
 @dataclass(frozen=True)
 class FoldResult:
-    held_out: str
-    theta_hat: np.ndarray
-    train_report: CalibrationReport
+    held_out: str                       # Name of tested experiment 
+    theta_hat: np.ndarray               # param estimated on the train
+    train_report: CalibrationReport     
     test_metrics: MetricsResult
 
 

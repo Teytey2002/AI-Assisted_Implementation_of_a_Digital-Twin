@@ -13,12 +13,12 @@ from .metrics import Metrics, MetricsResult
 
 @dataclass(frozen=True)
 class CalibrationReport:
-    theta_hat: np.ndarray
+    theta_hat: np.ndarray       # Parameter estimated
     cost: float
-    success: bool
-    message: str
-    nfev: int
-    per_experiment_metrics: List[tuple[str, MetricsResult]]
+    success: bool               # Info of convergence (from scipy)
+    message: str                # Info of convergence (from scipy)
+    nfev: int                   # Info of convergence (from scipy)
+    per_experiment_metrics: List[tuple[str, MetricsResult]]     # [RMSE, NMSE, MSE]
 
 
 class LeastSquaresCalibrator:

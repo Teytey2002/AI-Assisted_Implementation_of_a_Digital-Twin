@@ -6,6 +6,15 @@ import numpy as np
 
 @dataclass(frozen=True)
 class MetricsResult:
+    """
+    Example of usage :
+    
+    res = Metrics.compute(y, yhat)
+    res.rmse
+    res.nmse
+    res.mse
+
+    """
     rmse: float
     nmse: float
     mse: float

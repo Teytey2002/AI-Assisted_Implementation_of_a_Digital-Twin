@@ -10,10 +10,9 @@ from dtcalib.validation import LeaveOneExperimentOutCV
 
 
 def main() -> None:
-    data_folder = Path("data/experiments")  # <-- à adapter
+    data_folder = Path("data/LP_Dataset_csv_C_Modified")  
     ds = ExperimentsDataset.from_csv_folder(data_folder)
 
-    # Remplace ce simulateur par ton vrai simulateur (FMU/Modelica/etc.)
     simulator = ExampleRCCircuitSimulator(use_tau=True)
 
     calibrator = LeastSquaresCalibrator(
