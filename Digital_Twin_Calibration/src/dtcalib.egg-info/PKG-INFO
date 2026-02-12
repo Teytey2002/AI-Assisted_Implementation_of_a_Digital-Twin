@@ -1,0 +1,8 @@
+Metadata-Version: 2.4
+Name: dtcalib
+Version: 0.1.0
+Summary: Digital Twin Calibration Framework
+Author-email: Theo <theodesoil@gmail.com>
+Requires-Dist: numpy
+Requires-Dist: pandas
+Requires-Dist: scipy
