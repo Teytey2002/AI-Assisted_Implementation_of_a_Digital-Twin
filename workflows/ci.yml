@@ -23,11 +23,13 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Install dependencies
+      - name: Install package + test deps
         run: |
           python -m pip install --upgrade pip
-          pip install -e .
+          pip install -e ./Digital_Twin_Calibration
           pip install pytest
 
       - name: Run tests
-        run: pytest -q
+        run: |
+          cd Digital_Twin_Calibration
+          pytest -q
