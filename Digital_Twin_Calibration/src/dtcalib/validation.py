@@ -9,6 +9,7 @@ from .data import Experiment, ExperimentsDataset
 from .calibration import LeastSquaresCalibrator, CalibrationReport
 from .metrics import Metrics, MetricsResult
 from .simulation import Simulator
+from tqdm import tqdm
 
 
 @dataclass(frozen=True)
@@ -53,7 +54,7 @@ class LeaveOneExperimentOutCV:
     ) -> CrossValidationResult:
         folds: List[FoldResult] = []
 
-        for i, test_exp in enumerate(dataset.experiments):
+        for i, test_exp in enumerate(tqdm(dataset.experiments, desc="CV folds")):
             train_exps = [e for j, e in enumerate(dataset.experiments) if j != i]
 
             train_report = self._cal.calibrate(

@@ -13,6 +13,11 @@ def main() -> None:
     data_folder = Path("data/LP_Dataset_csv_C_Modified")  
     ds = ExperimentsDataset.from_csv_folder(data_folder)
 
+    # ADD test visu log 
+    y0 = ds[0].y
+    print("y stats: min=", float(y0.min()), "max=", float(y0.max()), "std=", float(y0.std()))
+    print("u stats: min=", float(ds[0].u.min()), "max=", float(ds[0].u.max()), "std=", float(ds[0].u.std()))
+
     simulator = ExampleRCCircuitSimulator(use_tau=True)
 
     calibrator = LeastSquaresCalibrator(

@@ -85,6 +85,7 @@ class LeastSquaresCalibrator:
             loss=self._loss,
             f_scale=self._f_scale,
             max_nfev=max_nfev,
+            #verbose=2              # Add a lot of information but to much in the terminal. Mayby on log after
         )
 
         # Build per-experiment diagnostics
