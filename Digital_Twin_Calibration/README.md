@@ -58,7 +58,6 @@ Exemples de dossiers existants :
 ```
 data/LP_Dataset_csv_Reference
 data/LP_Dataset_csv_C_Modified
-
 ```
 
 ## Modules dtcalib
@@ -164,9 +163,9 @@ theta0, bounds, max_nfev
 ## Tests unitaires
 
 Lancer tous les tests :
-
+```
 pytest -q
-
+```
 
 ### Tests inclus :
 
