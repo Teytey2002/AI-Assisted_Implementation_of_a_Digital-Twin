@@ -53,11 +53,12 @@ Chaque CSV doit contenir au minimum les colonnes suivantes (noms exacts par déf
 ```
 TIME | Addition_2.s_out.signal[1] (entrée) | SensorVoltage_1.v (sortie)
 ```
-Les noms sont configurables dans ExperimentsDataset.from_csv_folder(...).
-Exemples de dossiers existants (selon ton repo) :
+Exemples de dossiers existants :
 
+```
 data/LP_Dataset_csv_Reference
 data/LP_Dataset_csv_C_Modified
+```
 
 ## Modules dtcalib
 ### dtcalib/data.py
