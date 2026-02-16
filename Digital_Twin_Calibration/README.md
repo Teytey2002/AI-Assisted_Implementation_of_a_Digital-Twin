@@ -13,25 +13,28 @@ Ce sous-projet fournit une pipeline **propre, testée et maintenable** pour :
 
 ---
 
-## Structure du projet
+## 📁 Structure du projet
+
+```
 Digital_Twin_Calibration/
 ├─ pyproject.toml
 ├─ scripts/
 │ └─ run_calibration_cv.py
 ├─ src/
-│ └─ dtcalib/
+│ ├─ dtcalib/
 │ ├─ init.py
 │ ├─ data.py
 │ ├─ metrics.py
 │ ├─ simulation.py
 │ ├─ calibration.py
 │ └─ validation.py
-└─ tests/
-├─ test_data_loading.py
-├─ test_metrics.py
-├─ test_simulation.py
-├─ test_validation.py
-└─ test_calibration.py
+├─ tests/
+│ ├─ test_data_loading.py
+│ ├─ test_metrics.py
+│ ├─ test_simulation.py
+│ ├─ test_validation.py
+│ └─ test_calibration.py
+```
 
 ## Installation (mode développement)
 Depuis `Digital_Twin_Calibration/` :
