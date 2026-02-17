@@ -1,0 +1,12 @@
+Dataset CSV qui reprend toutes les simulations où on fait varier uniquement le low periode. 
+Pour chaque expériments, on ne garde que 3 colonnes : 
+TIME,Addition_2.s_out.signal[1],SensorVoltage_1.v
+
+Ce qui nous donne un couple entrée sortie pour la calibration des paramètres par la suite
+
+Attention, ici on modifie le C par rapport au circuit de référence 
+Données du circuit : 
+Resistor_1_1 = 10 000 Ohm
+Capacitor_1_1 = 1.5e-6 F        # Diviser de moitié par rapport au circuit de base
+Resistor_2_1 = 10 000 Ohm
+Fréquence de coupure = 10 Hz
