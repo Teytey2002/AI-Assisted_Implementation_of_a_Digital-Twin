@@ -1,0 +1,63 @@
+Dataset Used : LP_Dataset_csv_C_Modified
+Parameters used : 
+    simulator = LowPassR1CR2Simulator(R1=10_000.0, R2=10_000.0, use_C=True, y0_mode="dc_from_u0")
+
+    calibrator = LeastSquaresCalibrator(
+        simulator,
+        method="trf",
+        loss="linear",
+    )
+
+    cv = LeaveOneExperimentOutCV(simulator, calibrator)
+
+    theta0 = np.array([3e-6])  # initial guess de C
+    bounds = (np.array([1e-9]), np.array([1e-2]))  # C entre 1 nF et 10 mF (à adapter)
+
+y stats: min= -2.49861516 max= 2.49861393 std= 1.7650717940862473
+u stats: min= -5.0 max= 5.0 std= 3.531122757068164
+CV folds: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 100/100 [02:37<00:00,  1.58s/it]
+CV summary: {'rmse_mean': 0.12766043804837987, 'rmse_std': 0.053928352511705725, 'nmse_mean': 0.007760990184715699, 'nmse_std': 0.004938808327379208}
+[held-out=exp_lp_001_f0p5hz__results_lp_001_f0p5hz] theta_hat=[1.30517054e-06] rmse=0.235663 nmse=0.0178261
+[held-out=exp_lp_002_f0p523808hz__results_lp_002_f0p523808hz] theta_hat=[1.30517464e-06] rmse=0.233738 nmse=0.0175371
+[held-out=exp_lp_003_f0p548749hz__results_lp_003_f0p548749hz] theta_hat=[1.3051798e-06] rmse=0.231738 nmse=0.0172393
+[held-out=exp_lp_004_f0p574878hz__results_lp_004_f0p574878hz] theta_hat=[1.30518617e-06] rmse=0.229662 nmse=0.0169329
+[held-out=exp_lp_005_f0p602252hz__results_lp_005_f0p602252hz] theta_hat=[1.30519392e-06] rmse=0.227511 nmse=0.0166184
+
+
+
+
+
+
+
+
+
+
+
+
+Dataset Used : LP_Dataset_csv_C_Modified
+Parameters used : 
+    # ---------- Chose the simulator ---------- #
+    simulator = LowPassR1CR2Simulator(R1=10_000.0, R2=10_000.0, use_C=True, y0_mode="dc_from_u0")
+
+    # ---------- Chose the calibrator ---------- #
+    calibrator = BayesianMAPCalibrator(
+        simulator=simulator,
+        prior_mean=np.array([5e-7]),
+        prior_std=np.array([1.5e-6]),  # prior "large" => proche LS
+        sigma_y=1.0,
+    )
+
+    cv = LeaveOneExperimentOutCV(simulator, calibrator)
+
+    theta0 = np.array([3e-6])  # initial guess de C
+    bounds = (np.array([1e-9]), np.array([1e-2]))  # C entre 1 nF et 10 mF (à adapter)
+
+y stats: min= -2.49861516 max= 2.49861393 std= 1.7650717940862473
+u stats: min= -5.0 max= 5.0 std= 3.531122757068164
+CV folds: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 100/100 [02:42<00:00,  1.63s/it]
+CV summary: {'rmse_mean': 0.12766139677630703, 'rmse_std': 0.05392638873152219, 'nmse_mean': 0.00776181509258681, 'nmse_std': 0.004939749852647397}
+[held-out=exp_lp_001_f0p5hz__results_lp_001_f0p5hz] theta_hat=[1.30511158e-06] rmse=0.235663 nmse=0.0178261
+[held-out=exp_lp_002_f0p523808hz__results_lp_002_f0p523808hz] theta_hat=[1.30511569e-06] rmse=0.233738 nmse=0.0175371
+[held-out=exp_lp_003_f0p548749hz__results_lp_003_f0p548749hz] theta_hat=[1.30512085e-06] rmse=0.231738 nmse=0.0172393
+[held-out=exp_lp_004_f0p574878hz__results_lp_004_f0p574878hz] theta_hat=[1.30512722e-06] rmse=0.229662 nmse=0.0169329
+[held-out=exp_lp_005_f0p602252hz__results_lp_005_f0p602252hz] theta_hat=[1.30513496e-06] rmse=0.227511 nmse=0.0166184

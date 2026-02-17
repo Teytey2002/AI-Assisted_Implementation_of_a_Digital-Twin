@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 
 from dtcalib.data import Experiment
-from dtcalib.calibration import LeastSquaresCalibrator
+from dtcalib.calibration import LeastSquaresCalibrator, BayesianMAPCalibrator
 from dtcalib.simulation import ExampleRCCircuitSimulator
 
 
@@ -114,4 +114,87 @@ def test_bounds_raise_if_theta0_outside():
             experiments=[exp],
             theta0=np.array([0.05]),
             bounds=(np.array([0.1]), np.array([0.3])),
+        )
+
+
+
+# ------------------------------------------------------------
+# Test 1: MAP ≈ Least Squares if prior is very weak
+# ------------------------------------------------------------
+
+def test_map_matches_least_squares_when_prior_is_weak():
+    true_tau = 0.15
+    exp = _generate_experiment(true_tau)
+
+    simulator = ExampleRCCircuitSimulator(use_tau=True)
+
+    ls_cal = LeastSquaresCalibrator(simulator)
+    map_cal = BayesianMAPCalibrator(
+        simulator,
+        prior_mean=np.array([0.0]),
+        prior_std=np.array([1e6]),  # extremely weak prior
+        sigma_y=1.0
+    )
+
+    ls_report = ls_cal.calibrate(
+        experiments=[exp],
+        theta0=np.array([0.05]),
+        bounds=(np.array([0.01]), np.array([1.0]))
+    )
+
+    map_report = map_cal.calibrate(
+        experiments=[exp],
+        theta0=np.array([0.05]),
+        bounds=(np.array([0.01]), np.array([1.0]))
+    )
+
+    assert map_report.success
+    assert map_report.theta_hat[0] == pytest.approx(
+        ls_report.theta_hat[0],
+        rel=1e-3
+    )
+
+
+# ------------------------------------------------------------
+# Test 2: Strong prior pulls solution toward prior_mean
+# ------------------------------------------------------------
+
+def test_strong_prior_influences_solution():
+    true_tau = 0.2
+    exp = _generate_experiment(true_tau)
+
+    simulator = ExampleRCCircuitSimulator(use_tau=True)
+
+    strong_prior_mean = np.array([0.05])
+    strong_prior_std = np.array([1e-4])  # very strong prior
+
+    map_cal = BayesianMAPCalibrator(
+        simulator,
+        prior_mean=strong_prior_mean,
+        prior_std=strong_prior_std,
+        sigma_y=1.0
+    )
+
+    report = map_cal.calibrate(
+        experiments=[exp],
+        theta0=np.array([0.05]),
+        bounds=(np.array([0.01]), np.array([1.0]))
+    )
+
+    # Solution should be closer to prior than true value
+    assert abs(report.theta_hat[0] - strong_prior_mean[0]) < 0.01
+
+
+# ------------------------------------------------------------
+# Test 3: prior dimension mismatch raises
+# ------------------------------------------------------------
+
+def test_prior_dimension_mismatch_raises():
+    simulator = ExampleRCCircuitSimulator(use_tau=True)
+
+    with pytest.raises(ValueError):
+        BayesianMAPCalibrator(
+            simulator,
+            prior_mean=np.array([0.1]),
+            prior_std=np.array([0.1, 0.2])  # wrong size
         )
