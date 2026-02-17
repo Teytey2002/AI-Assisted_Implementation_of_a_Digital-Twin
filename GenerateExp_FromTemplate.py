@@ -29,7 +29,7 @@ EXS_CONTENT = """<simulation_settings version="1.0">
 #    "experiments/+filter+examples.default_+l+p_+sensor/+l+p_+dataset"
 #)
 # Erreur, droit d'accès entre windows et wsl. Pour faire simple, on créer le dossier dans le répertoire actuel puis on déplace manuellement au bon endroit. 
-OUT_DIR = Path("/mnt/c/Users/theod/OneDrive/Documents/ULB/Ma2/TFE/AI-Assisted_Implementation_of_a_Digital-Twin/LP_Dataset_C_Modified")
+OUT_DIR = Path("/mnt/c/Users/theod/OneDrive/Documents/ULB/Ma2/TFE/AI-Assisted_Implementation_of_a_Digital-Twin/LP_Dataset_Deep_Learning")
 
 # Chemin du template .exp 
 TEMPLATE_EXP = Path(
@@ -45,9 +45,27 @@ F_MIN = FC / 10.0
 F_MAX = FC * 10.0   
 N = 100     # Nb d'expérience voulu
 
+C_MIN = 8e-7
+C_MAX = 3.2e-6
+N_C = 50              # nb de valeurs de C
+
 # -----------------------------
 # Helpers
 # -----------------------------
+def cap_tag(c: float) -> str:
+    s = f"{c:.6g}"
+    s = s.replace(".", "p").replace("-", "m")
+    s = s.replace("+", "")
+    return s
+
+def replace_capacitance(text: str, new_c: float) -> str:
+    pattern = r"(?m)^\s*Capacitor_1_1\.C\s*=\s*[-+]?(\d+(\.\d*)?|\.\d+)([eE][-+]?\d+)?\s*$"
+    repl = f"Capacitor_1_1.C = {new_c:.12g}"
+    out, n = re.subn(pattern, repl, text, count=1)
+    if n == 0:
+        raise ValueError("Could not find a line 'Capacitor_1_1.C = ...' in the template.")
+    return out
+
 def freq_tag(f_hz: float) -> str:
     """Human-safe tag for filenames/experiment names."""
     # 2-3 sig figs is enough; keep consistent
@@ -91,42 +109,48 @@ def main():
 
     template_text = TEMPLATE_EXP.read_text(encoding="utf-8", errors="ignore")
 
-    # log-spaced frequencies
+    # log-spaced frequencies and Capa 
     freqs = np.logspace(math.log10(F_MIN), math.log10(F_MAX), N)
+    Cs = np.logspace(math.log10(C_MIN), math.log10(C_MAX), N_C)
 
     written = 0
-    for i, f in enumerate(freqs, start=1):
-        period = 1.0 / float(f)
+    for j, C in enumerate(Cs, start=1):
+        ctag = cap_tag(float(C))
+        c_folder = OUT_DIR / f"dataset_+c_{ctag}"
 
-        tag = freq_tag(float(f))
-        exp_name = f"exp_lp_{i:03d}_f{tag}hz"
-        report_name = f"results_lp_{i:03d}_f{tag}hz.rpt"
+        for i, f in enumerate(freqs, start=1):
+            period = 1.0 / float(f)
 
-        exp_folder = OUT_DIR / exp_name
-        exp_folder.mkdir(parents=True, exist_ok=True)
+            tag = freq_tag(float(f))
+            exp_name = f"exp_lp_{i:03d}_f{tag}hz"
+            report_name = f"results_lp_{i:03d}_f{tag}hz.rpt"
 
-        # EcosimPro convention: <folder>/<folder>.exp
-        exp_path = exp_folder / f"{exp_name}.exp"
+            exp_folder = c_folder / exp_name
+            exp_folder.mkdir(parents=True, exist_ok=True)
 
-        text = template_text
-        text = replace_experiment_name(text, exp_name)
-        text = replace_low_period(text, period)
+            # EcosimPro convention: <folder>/<folder>.exp
+            exp_path = exp_folder / f"{exp_name}.exp"
 
-        # Replace REPORT_TABLE - only if you already have it in template.
-        # If your template doesn't include REPORT_TABLE, add it there first.
-        # Note: keep "*" export for now.
-        text, n = re.subn(
-            r'(?m)^\s*REPORT_TABLE\(".*?"\s*,\s*".*?"\s*\)',
-            f'REPORT_TABLE("{report_name}", "*")',
-            text,
-            count=1
-        )
-        if n == 0:
-            raise ValueError("Could not find REPORT_TABLE(...) in the template. Add it once in template.")
+            text = template_text
+            text = replace_experiment_name(text, exp_name)
+            text = replace_low_period(text, period)
+            text = replace_capacitance(text, float(C))
 
-        exp_path.write_text(text, encoding="utf-8")
-        write_exs_file(exp_folder, exp_name)
-        written += 1
+            # Replace REPORT_TABLE - only if you already have it in template.
+            # If your template doesn't include REPORT_TABLE, add it there first.
+            # Note: keep "*" export for now.
+            text, n = re.subn(
+                r'(?m)^\s*REPORT_TABLE\(".*?"\s*,\s*".*?"\s*\)',
+                f'REPORT_TABLE("{report_name}", "*")',
+                text,
+                count=1
+            )
+            if n == 0:
+                raise ValueError("Could not find REPORT_TABLE(...) in the template. Add it once in template.")
+
+            exp_path.write_text(text, encoding="utf-8")
+            write_exs_file(exp_folder, exp_name)
+            written += 1
 
     print(f"OK: wrote {written} experiments into:\n  {OUT_DIR}")
 
