@@ -384,6 +384,7 @@ class RCNeuralCalibrator:
             C_predictions.append(C_i)
 
         C_array = np.asarray(C_predictions, dtype=float)
+        print("C preds: min/max/mean/std =", float(C_array.min()), float(C_array.max()), float(C_array.mean()), float(C_array.std()))
 
         # ---- 2. Aggregate ----
         if aggregate == "mean":

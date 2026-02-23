@@ -77,6 +77,7 @@ Parameters used :
     print("NN Global C_hat:", report.theta_hat)
     print("Variance:", report.cost)
 
+C preds: min/max/mean/std = 1.105060050576867e-06 2.268858906973037e-06 1.7113528519985267e-06 1.9764372428351368e-07
 y stats: min= -2.49861516 max= 2.49861393 std= 1.7650717940862473
 u stats: min= -5.0 max= 5.0 std= 3.531122757068164
 NN Global C_hat: [1.71135285e-06]

@@ -10,7 +10,8 @@ from dtcalib.validation import LeaveOneExperimentOutCV
 
 
 def main() -> None:
-    data_folder = Path("data/LP_Dataset_csv_C_Modified")  
+    #data_folder = Path("data/LP_Dataset_csv_C_Modified")  
+    data_folder = Path("data/ALL_LP_DATASETS_CSV_Deep_learning/dataset_+c_1p0032em06")  
     ds = ExperimentsDataset.from_csv_folder(data_folder)
 
     # ADD test visu log 
