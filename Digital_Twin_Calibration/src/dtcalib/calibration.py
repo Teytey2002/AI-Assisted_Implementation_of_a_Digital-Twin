@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Callable, List, Optional, Sequence, Tuple
+from typing import Callable, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 from scipy.optimize import least_squares
@@ -9,6 +9,11 @@ from scipy.optimize import least_squares
 from .data import Experiment
 from .simulation import Simulator
 from .metrics import Metrics, MetricsResult
+
+from pathlib import Path
+import torch
+
+from deep_learning.model import RCInverseCNN
 
 
 @dataclass(frozen=True)
@@ -217,5 +222,203 @@ class BayesianMAPCalibrator(LeastSquaresCalibrator):
             success=bool(result.success),
             message=str(result.message),
             nfev=int(result.nfev),
+            per_experiment_metrics=per_metrics,
+        )
+
+
+
+
+
+
+# -----------------------------------------------------------
+# ------------- Deep learning Calibration -------------------
+# -----------------------------------------------------------
+
+@dataclass(frozen=True)
+class NormalizationStats:
+    x_mean: torch.Tensor  # shape [2]
+    x_std: torch.Tensor   # shape [2]
+    y_mean: torch.Tensor  # scalar
+    y_std: torch.Tensor   # scalar
+
+
+class RCNeuralCalibrator:
+    """
+    Neural inverse calibrator:
+      input  : Vin(t), Vout(t)
+      output : C_hat
+
+    It encapsulates:
+      - model weights
+      - normalization stats (train-derived)
+      - de-normalization of the output
+    """
+
+    def __init__(
+        self,
+        model: torch.nn.Module,
+        stats: NormalizationStats,
+        device: Optional[torch.device] = None,
+    ) -> None:
+        self.device = device or torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.model = model.to(self.device)
+        self.model.eval()
+
+        # Move stats to device for fast inference
+        self.stats = NormalizationStats(
+            x_mean=stats.x_mean.to(self.device),
+            x_std=stats.x_std.to(self.device),
+            y_mean=stats.y_mean.to(self.device),
+            y_std=stats.y_std.to(self.device),
+        )
+
+    @staticmethod
+    def load(checkpoint_path: Union[str, Path], device: Optional[torch.device] = None) -> "RCNeuralCalibrator":
+        checkpoint_path = Path(checkpoint_path)
+        ckpt = torch.load(checkpoint_path, map_location="cpu")
+
+        model = RCInverseCNN()
+        model.load_state_dict(ckpt["model_state_dict"])
+
+        stats = NormalizationStats(
+            x_mean=ckpt["x_mean"].float(),
+            x_std=ckpt["x_std"].float(),
+            y_mean=ckpt["y_mean"].float(),
+            y_std=ckpt["y_std"].float(),
+        )
+
+        return RCNeuralCalibrator(model=model, stats=stats, device=device)
+
+    def _normalize_x(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        x: [2, T] or [B, 2, T]
+        """
+        if x.ndim == 2:
+            return (x - self.stats.x_mean[:, None]) / self.stats.x_std[:, None]
+        if x.ndim == 3:
+            return (x - self.stats.x_mean[None, :, None]) / self.stats.x_std[None, :, None]
+        raise ValueError(f"Expected x with shape [2,T] or [B,2,T], got {tuple(x.shape)}")
+
+    def _denormalize_y(self, y_norm: torch.Tensor) -> torch.Tensor:
+        """
+        y_norm: [B] or scalar tensor
+        """
+        return y_norm * self.stats.y_std + self.stats.y_mean
+
+    def predict(self, vin: Union[np.ndarray, torch.Tensor], vout: Union[np.ndarray, torch.Tensor]) -> float:
+        """
+        vin, vout: arrays of shape [T]
+        returns: C_hat in Farads
+        """
+        if isinstance(vin, np.ndarray):
+            vin_t = torch.tensor(vin, dtype=torch.float32)
+        else:
+            vin_t = vin.float()
+
+        if isinstance(vout, np.ndarray):
+            vout_t = torch.tensor(vout, dtype=torch.float32)
+        else:
+            vout_t = vout.float()
+
+        if vin_t.ndim != 1 or vout_t.ndim != 1:
+            raise ValueError("vin and vout must be 1D arrays (shape [T]).")
+        if vin_t.shape[0] != vout_t.shape[0]:
+            raise ValueError("vin and vout must have the same length T.")
+
+        x = torch.stack([vin_t, vout_t], dim=0).to(self.device)  # [2, T]
+        x = self._normalize_x(x)
+        x = x.unsqueeze(0)  # [1, 2, T]
+
+        with torch.no_grad():
+            y_norm = self.model(x)          # [1]
+            y = self._denormalize_y(y_norm) # [1]
+
+        return float(y.item())
+    
+    def calibrate(
+        self,
+        experiments: Sequence[Experiment],
+        *,
+        aggregate: str = "mean",   # "mean" or "median"
+    ) -> CalibrationReport:
+        """
+        Neural calibration by inference.
+
+        For each experiment:
+            - Predict C_i = f_NN(Vin_i, Vout_i)
+
+        Then:
+            - Aggregate into a global C_hat (mean or median)
+            - Compute empirical variance as a proxy for confidence
+
+        Parameters
+        ----------
+        experiments : list of Experiment
+            Experiments containing (t, u, y)
+
+        aggregate : str
+            Aggregation strategy across experiments:
+                - "mean"   : arithmetic mean
+                - "median" : robust median
+
+        Returns
+        -------
+        CalibrationReport
+            theta_hat  : aggregated C estimate
+            cost       : empirical variance across C_i
+            success    : always True (no optimization involved)
+            message    : description of aggregation
+            nfev       : 0 (no function evaluations)
+            per_experiment_metrics :
+                Here we store predicted C_i and deviation from global C_hat
+        """
+
+        if len(experiments) == 0:
+            raise ValueError("Need at least one experiment.")
+
+        C_predictions: List[float] = []
+
+        # ---- 1. Predict C for each experiment ----
+        for exp in experiments:
+            C_i = self.predict(exp.u, exp.y)
+            C_predictions.append(C_i)
+
+        C_array = np.asarray(C_predictions, dtype=float)
+
+        # ---- 2. Aggregate ----
+        if aggregate == "mean":
+            C_hat = float(np.mean(C_array))
+        elif aggregate == "median":
+            C_hat = float(np.median(C_array))
+        else:
+            raise ValueError("aggregate must be 'mean' or 'median'.")
+
+        # Empirical variance across experiments
+        empirical_variance = float(np.var(C_array))
+
+        # ---- 3. Build per-experiment diagnostics ----
+        per_metrics: List[tuple[str, MetricsResult]] = []
+
+        for exp, C_i in zip(experiments, C_array):
+            # deviation from global estimate
+            deviation = float(abs(C_i - C_hat))
+
+            # We store deviation in a MetricsResult-like structure
+            # (we reuse the MetricsResult container for consistency)
+            dummy_metrics = MetricsResult(
+                rmse=deviation,
+                nmse=deviation,
+                mse=deviation,
+            )
+
+            per_metrics.append((exp.name, dummy_metrics))
+
+        # ---- 4. Return CalibrationReport ----
+        return CalibrationReport(
+            theta_hat=np.array([C_hat], dtype=float),
+            cost=empirical_variance,
+            success=True,
+            message=f"Neural inference with {aggregate} aggregation over {len(experiments)} experiments.",
+            nfev=0,
             per_experiment_metrics=per_metrics,
         )

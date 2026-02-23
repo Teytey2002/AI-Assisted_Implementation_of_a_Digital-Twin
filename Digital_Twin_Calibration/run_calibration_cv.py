@@ -5,7 +5,7 @@ import numpy as np
 
 from dtcalib.data import ExperimentsDataset
 from dtcalib.simulation import ExampleRCCircuitSimulator, LowPassR1CR2Simulator
-from dtcalib.calibration import LeastSquaresCalibrator, BayesianMAPCalibrator
+from dtcalib.calibration import LeastSquaresCalibrator, BayesianMAPCalibrator, RCNeuralCalibrator
 from dtcalib.validation import LeaveOneExperimentOutCV
 
 
@@ -35,6 +35,12 @@ def main() -> None:
         prior_std=np.array([1.5e-6]),  # prior "large" => proche LS
         sigma_y=1.0,
     )
+
+    # Version to use NN, but maybe, no  needs LeaveOneExperimentOutCV
+    # Mayby add argument to run with good simulation and calibrator by using arg in commadn line
+    #calibrator = RCNeuralCalibrator.load("model.pth")
+    #report = calibrator.calibrate(ds.experiments)
+    #print(report.theta_hat)
 
     cv = LeaveOneExperimentOutCV(simulator, calibrator)
 

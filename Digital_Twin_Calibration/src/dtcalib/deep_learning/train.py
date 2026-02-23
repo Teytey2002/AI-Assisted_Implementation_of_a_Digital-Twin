@@ -36,6 +36,20 @@ def train(root_dir: Path):
 
     train_set, val_set = random_split(dataset, [n_train, n_val])
 
+    # IMPORTANT: compute normalization only on train
+    train_set.dataset.compute_normalization()
+
+    # Apply same stats to both
+    stats = (
+        train_set.dataset.x_mean,
+        train_set.dataset.x_std,
+        train_set.dataset.y_mean,
+        train_set.dataset.y_std
+    )
+
+    train_set.dataset.set_normalization(*stats)
+    val_set.dataset.set_normalization(*stats)
+
     train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True)
     val_loader = DataLoader(val_set, batch_size=batch_size)
 
@@ -138,7 +152,17 @@ def train(root_dir: Path):
         # -------- Early stopping --------
         if val_loss < best_val_loss:
             best_val_loss = val_loss
-            torch.save(model.state_dict(), model_path)
+            torch.save(
+            {
+                "model_state_dict": model.state_dict(),
+                "x_mean": train_loader.x_mean,   # shape [2]
+                "x_std": train_loader.x_std,     # shape [2]
+                "y_mean": train_loader.y_mean,   # scalar
+                "y_std": train_loader.y_std,     # scalar
+                "model_class": "RCInverseCNN",
+            },
+            model_path,
+        )
             print(f"✅ Best model saved (val_loss={best_val_loss:.6e})")
             epochs_no_improve = 0
         else:
