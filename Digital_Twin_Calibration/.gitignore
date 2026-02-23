@@ -1,0 +1,9 @@
+# datasets
+data/
+*.csv
+
+# logs
+*.log
+
+# cache
+__pycache__/
