@@ -191,3 +191,43 @@ Ajouter une progress bar via tqdm est recommandé pour suivre l’avancement.
 ## Auteurs / Contexte
 
 Travail réalisé dans le cadre d’un TFE (calibration de paramètres d’un digital twin) avec datasets générés par EcoSimPro.
+
+
+# 🔧 Installation du projet
+## 1️⃣ Cloner le dépôt
+```
+git clone <URL_DU_REPO>
+cd Digital_Twin_Calibration
+```
+## 2️⃣ Créer les environnements Conda
+
+Le projet utilise deux environnements :
+- un environnement principal pour le pipeline et les scripts
+- un environnement dédié à l’entraînement Deep Learning (GPU)
+
+➜ Environnement principal
+```
+conda env create -f environment.yml
+conda activate DT_AI
+```
+➜ Environnement Deep Learning (GPU)
+```
+conda env create -f environment_torch.yml
+conda activate torch_gpu
+```
+⚠️ L’environnement torch_gpu est requis pour l’entraînement sur GPU.
+
+## 3️⃣ Installer le package du projet
+
+Depuis la racine du projet :
+```
+pip install -e .
+```
+Cette commande installe le projet en mode développement (editable), permettant d’utiliser le package dtcalib tout en reflétant immédiatement les modifications du code.
+
+## ✅ Vérification rapide
+
+Tu peux vérifier que l’installation est correcte :
+```
+python -c "import dtcalib; print(dtcalib.__file__)"
+```
