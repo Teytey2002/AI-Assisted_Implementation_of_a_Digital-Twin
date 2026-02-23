@@ -13,7 +13,7 @@ from .metrics import Metrics, MetricsResult
 from pathlib import Path
 import torch
 
-from deep_learning.model import RCInverseCNN
+from dtcalib.deep_learning.model import RCInverseCNN
 
 
 @dataclass(frozen=True)

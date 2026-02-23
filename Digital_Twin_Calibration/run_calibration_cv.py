@@ -29,33 +29,34 @@ def main() -> None:
     #    loss="linear",
     #)
 
-    calibrator = BayesianMAPCalibrator(
-        simulator=simulator,
-        prior_mean=np.array([5e-7]),
-        prior_std=np.array([1.5e-6]),  # prior "large" => proche LS
-        sigma_y=1.0,
-    )
+    #calibrator = BayesianMAPCalibrator(
+    #    simulator=simulator,
+    #    prior_mean=np.array([5e-7]),
+    #    prior_std=np.array([1.5e-6]),  # prior "large" => proche LS
+    #    sigma_y=1.0,
+    #)
+
+    #cv = LeaveOneExperimentOutCV(simulator, calibrator)
+
+    #theta0 = np.array([3e-6])  # initial guess de C
+    #bounds = (np.array([1e-9]), np.array([1e-2]))  # C entre 1 nF et 10 mF (à adapter)
+
+    #cv_result = cv.run(ds, theta0=theta0, bounds=bounds, max_nfev=200)
+
+    #print("CV summary:", cv_result.summary())
+    #for fold in cv_result.folds[:5]:
+    #    print(
+    #        f"[held-out={fold.held_out}] "
+    #        f"theta_hat={fold.theta_hat} "
+    #        f"rmse={fold.test_metrics.rmse:.6g} nmse={fold.test_metrics.nmse:.6g}"
+    #    )
 
     # Version to use NN, but maybe, no  needs LeaveOneExperimentOutCV
     # Mayby add argument to run with good simulation and calibrator by using arg in commadn line
-    #calibrator = RCNeuralCalibrator.load("model.pth")
-    #report = calibrator.calibrate(ds.experiments)
-    #print(report.theta_hat)
-
-    cv = LeaveOneExperimentOutCV(simulator, calibrator)
-
-    theta0 = np.array([3e-6])  # initial guess de C
-    bounds = (np.array([1e-9]), np.array([1e-2]))  # C entre 1 nF et 10 mF (à adapter)
-
-    cv_result = cv.run(ds, theta0=theta0, bounds=bounds, max_nfev=200)
-
-    print("CV summary:", cv_result.summary())
-    for fold in cv_result.folds[:5]:
-        print(
-            f"[held-out={fold.held_out}] "
-            f"theta_hat={fold.theta_hat} "
-            f"rmse={fold.test_metrics.rmse:.6g} nmse={fold.test_metrics.nmse:.6g}"
-        )
+    calibrator = RCNeuralCalibrator.load("./src/dtcalib/deep_learning/models/rc_inverse_best_2026-02-23_15-56-57.pth")
+    report = calibrator.calibrate(ds.experiments)
+    print("NN Global C_hat:", report.theta_hat)
+    print("Variance:", report.cost)
 
 
 if __name__ == "__main__":

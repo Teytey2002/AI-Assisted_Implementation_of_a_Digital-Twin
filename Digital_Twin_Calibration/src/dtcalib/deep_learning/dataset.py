@@ -23,23 +23,34 @@ class RCSignalDataset(Dataset):
         root_dir = Path(root_dir)
 
         for c_folder in root_dir.iterdir():
+            #print("c_folder = ", c_folder)
             if not c_folder.is_dir():
                 continue
 
-            # Extract C from folder name
-            match = re.search(r"C_(.*)", c_folder.name)
+            # Extract C from folder name like: dataset_+c_1p0032em06
+            # on capture 1p0032em06 et on convertit en 1.0032e-06
+            match = re.search(r"\+c_([0-9p]+e[m|p][0-9]+)", c_folder.name)
             if match is None:
+                #print("match none, je continue")
                 continue
 
-            c_str = match.group(1).replace("p", ".")
+            c_token = match.group(1)  # ex: "1p0032em06"
+            c_str = (c_token.replace("p", ".").replace("em", "e-").replace("ep", "e+"))
             C_value = float(c_str)
 
-            for exp_folder in c_folder.iterdir():
-                if not exp_folder.is_dir():
+            for csv_file in c_folder.rglob("*.csv"):
+                #print("csv_file", csv_file)
+                if "results" not in csv_file.name.lower():  # Au cas ou un csv de log ou autre se trouve un mauvais endroit
                     continue
+                self.samples.append((csv_file, C_value))
 
-                for csv_file in exp_folder.glob("*.csv"):
-                    self.samples.append((csv_file, C_value))
+        # For debug        
+        #print(f"[RCSignalDataset] root_dir={root_dir}")
+        #print(f"[RCSignalDataset] found {len(self.samples)} samples")
+        #if len(self.samples) == 0:
+        #    # show first few folder names to debug regex
+        #    subdirs = [p.name for p in Path(root_dir).iterdir() if p.is_dir()]
+        #    print("[RCSignalDataset] first subdirs:", subdirs[:10])
             
         # Normalization parameters (set later)
         self.x_mean = None
@@ -51,6 +62,11 @@ class RCSignalDataset(Dataset):
     # Compute normalization stats (ATTENTION : call only on train set)
     # ----------------------------------------------------
     def compute_normalization(self):
+        if len(self.samples) == 0:
+            raise ValueError(
+                "RCSignalDataset has 0 samples. Check folder naming (C_...) and CSV location."
+            )
+
         xs = []
         ys = []
 

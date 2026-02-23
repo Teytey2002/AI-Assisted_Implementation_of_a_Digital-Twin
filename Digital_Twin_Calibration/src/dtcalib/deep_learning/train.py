@@ -64,8 +64,7 @@ def train(root_dir: Path):
         optimizer,
         mode="min",
         factor=0.8,
-        patience=10,
-        verbose=True
+        patience=10
     )
 
     # -------------------------
@@ -155,10 +154,10 @@ def train(root_dir: Path):
             torch.save(
             {
                 "model_state_dict": model.state_dict(),
-                "x_mean": train_loader.x_mean,   # shape [2]
-                "x_std": train_loader.x_std,     # shape [2]
-                "y_mean": train_loader.y_mean,   # scalar
-                "y_std": train_loader.y_std,     # scalar
+                "x_mean": train_set.dataset.x_mean,   # shape [2]
+                "x_std": train_set.dataset.x_std,     # shape [2]
+                "y_mean": train_set.dataset.y_mean,   # scalar
+                "y_std": train_set.dataset.y_std,     # scalar
                 "model_class": "RCInverseCNN",
             },
             model_path,
@@ -175,3 +174,7 @@ def train(root_dir: Path):
 
     writer.close()
     print(f"Training complete. Best model at: {model_path}")
+
+
+if __name__ == "__main__":
+    train("../../../data/ALL_LP_DATASETS_CSV_Deep_learning")

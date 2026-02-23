@@ -61,3 +61,23 @@ CV summary: {'rmse_mean': 0.12766139677630703, 'rmse_std': 0.05392638873152219, 
 [held-out=exp_lp_003_f0p548749hz__results_lp_003_f0p548749hz] theta_hat=[1.30512085e-06] rmse=0.231738 nmse=0.0172393
 [held-out=exp_lp_004_f0p574878hz__results_lp_004_f0p574878hz] theta_hat=[1.30512722e-06] rmse=0.229662 nmse=0.0169329
 [held-out=exp_lp_005_f0p602252hz__results_lp_005_f0p602252hz] theta_hat=[1.30513496e-06] rmse=0.227511 nmse=0.0166184
+
+
+
+
+
+
+
+
+
+Dataset Used : LP_Dataset_csv_C_Modified
+Parameters used : 
+    calibrator = RCNeuralCalibrator.load("./src/dtcalib/deep_learning/models/rc_inverse_best_2026-02-23_15-56-57.pth")
+    report = calibrator.calibrate(ds.experiments)
+    print("NN Global C_hat:", report.theta_hat)
+    print("Variance:", report.cost)
+
+y stats: min= -2.49861516 max= 2.49861393 std= 1.7650717940862473
+u stats: min= -5.0 max= 5.0 std= 3.531122757068164
+NN Global C_hat: [1.71135285e-06]
+Variance: 3.9063041748657576e-14
