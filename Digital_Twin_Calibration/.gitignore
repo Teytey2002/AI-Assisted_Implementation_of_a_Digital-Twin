@@ -7,3 +7,9 @@ data/
 
 # cache
 __pycache__/
+
+# Python bytecode (Created to accelerate compilation)
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
