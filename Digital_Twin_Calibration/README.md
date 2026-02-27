@@ -212,7 +212,7 @@ conda activate DT_AI
 ```
 ➜ Environnement Deep Learning (GPU)
 ```
-conda env create -f environment_torch.yml
+conda env create -f env_deep_learning.yml
 conda activate torch_gpu
 ```
 ⚠️ L’environnement torch_gpu est requis pour l’entraînement sur GPU.
