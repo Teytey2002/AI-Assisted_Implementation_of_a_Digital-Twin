@@ -1,6 +1,6 @@
 import numpy as np
-from search.search_space import SearchSpace
-from search.sampler import Sampler
+from dtcalib.iterated_racing.search_space import SearchSpace
+from dtcalib.iterated_racing.sampler import Sampler
 
 
 def test_initial_population_size():

@@ -109,7 +109,7 @@ def test_bounds_raise_if_theta0_outside():
     simulator = ExampleRCCircuitSimulator(use_tau=True)
     calibrator = LeastSquaresCalibrator(simulator)
 
-    with pytest.raises(ValueError, match="x0.*infeasible"):
+    with pytest.raises(ValueError, match=r"Initial guess is outside of provided bounds"):
         calibrator.calibrate(
             experiments=[exp],
             theta0=np.array([0.05]),
