@@ -12,17 +12,16 @@ class RCSignalDataset(Dataset):
     Expects structure:
 
     root/
-        dataset_C_8e-7/
+        dataset_+c_1p003em06/
             exp_.../
                 results_....csv
     """
-
-    def __init__(self, root_dir: Path):
+    def __init__(self, root_dir: Path, target_transform: str = "C"):
         self.samples = []
 
         root_dir = Path(root_dir)
 
-        for c_folder in root_dir.iterdir():
+        for c_folder in sorted(root_dir.iterdir()):
             #print("c_folder = ", c_folder)
             if not c_folder.is_dir():
                 continue
@@ -38,7 +37,7 @@ class RCSignalDataset(Dataset):
             c_str = (c_token.replace("p", ".").replace("em", "e-").replace("ep", "e+"))
             C_value = float(c_str)
 
-            for csv_file in c_folder.rglob("*.csv"):
+            for csv_file in sorted(c_folder.rglob("*.csv")):
                 #print("csv_file", csv_file)
                 if "results" not in csv_file.name.lower():  # Au cas ou un csv de log ou autre se trouve un mauvais endroit
                     continue
@@ -52,16 +51,38 @@ class RCSignalDataset(Dataset):
         #    subdirs = [p.name for p in Path(root_dir).iterdir() if p.is_dir()]
         #    print("[RCSignalDataset] first subdirs:", subdirs[:10])
             
+
+        # Target transform mode
+        # "C"   -> y = C
+        # "logC"-> y = ln(C)
+        self.target_transform = "C"
+        self.set_target_transform(target_transform)
+
         # Normalization parameters (set later)
         self.x_mean = None
         self.x_std = None
         self.y_mean = None
         self.y_std = None
+    
+    # ----------------------------------------------------
+    # Target transform
+    # ----------------------------------------------------
+    def set_target_transform(self, mode: str):
+        mode = str(mode)
+        if mode not in ("C", "logC"):
+            raise ValueError(f"Unknown target_transform={mode}. Use 'C' or 'logC'.")
+        self.target_transform = mode
+
+    def _transform_y(self, y_value: float) -> float:
+        # C_value is strictly positive (as you confirmed)
+        if self.target_transform == "logC":
+            return float(np.log(y_value))  # natural log
+        return float(y_value)
 
     # ----------------------------------------------------
     # Compute normalization stats (ATTENTION : call only on train set)
     # ----------------------------------------------------
-    def compute_normalization(self):
+    def compute_normalization(self, indices=None):
         if len(self.samples) == 0:
             raise ValueError(
                 "RCSignalDataset has 0 samples. Check folder naming (C_...) and CSV location."
@@ -70,7 +91,8 @@ class RCSignalDataset(Dataset):
         xs = []
         ys = []
 
-        for csv_path, C_value in self.samples:
+        iter_samples = self.samples if indices is None else [self.samples[i] for i in indices]
+        for csv_path, C_value in iter_samples:
             df = pd.read_csv(csv_path)
 
             Vin = df.iloc[:, 1].values
@@ -78,7 +100,7 @@ class RCSignalDataset(Dataset):
 
             x = np.stack([Vin, Vout], axis=0)
             xs.append(x)
-            ys.append(C_value)
+            ys.append(self._transform_y(C_value))
 
         xs = np.concatenate(xs, axis=1)  # concat along time
         ys = np.array(ys)
@@ -110,7 +132,8 @@ class RCSignalDataset(Dataset):
         Vout = torch.tensor(df.iloc[:, 2].values, dtype=torch.float32)
 
         x = torch.stack([Vin, Vout], dim=0)  # [2, T]
-        y = torch.tensor(C_value, dtype=torch.float32)
+        y_value = self._transform_y(C_value)
+        y = torch.tensor(y_value, dtype=torch.float32)
         
         # Apply normalization if available
         if self.x_mean is not None:
