@@ -1,5 +1,10 @@
 # src/dtcalib/deep_learning/make_split.py
 """
+Par contre, ton make_split.py actuel fait un split stratifié à l’intérieur de chaque C (70/15/15). Donc il met les mêmes C à la fois en train et en val/test, 
+juste avec des fréquences différentes. C’est OK si ton objectif est “généraliser à d’autres fréquences pour des C déjà vus”, mais si tu veux 
+“généraliser à des C jamais vus”, il faut une CV GroupKFold par C.
+--> make_cross_validation_slipt.py
+
 Command used for create the split : 
 (torch_gpu) xxxx@TeyteyCase:/mnt/c/Users/theod/OneDrive/Documents/ULB/Ma2/TFE/AI-Assisted_Implementation_of_a_Digital-Twin/Digital_Twin_Calibration/src/dtcalib/deep_learning$ 
 python3 make_split.py --root-dir ../../../data/ALL_LP_DATASETS_CSV_Deep_learning
