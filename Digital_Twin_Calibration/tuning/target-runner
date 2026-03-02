@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -eu
+
+TUNING_DIR="$(cd "$(dirname "$0")" && pwd)"
+ROOT_DIR="$(cd "${TUNING_DIR}/.." && pwd)"
+
+CONFIG_ID="$1"
+INSTANCE_ID="$2"
+SEED="$3"
+INSTANCE="$4" # fold0..fold4
+shift 4
+
+python3 -u "${ROOT_DIR}/src/dtcalib/iterated_racing/irace_train_eval.py" \
+  --root-dir "${ROOT_DIR}/data/ALL_LP_DATASETS_CSV_Deep_learning" \
+  --split-json "${ROOT_DIR}/src/dtcalib/deep_learning/splits/rc_cv_${INSTANCE}.json" \
+  --device "cuda" \
+  --seed "${SEED}" \
+  --epochs 20 \
+  "$@"
