@@ -74,7 +74,23 @@ class Evaluator:
         self._set_seed(req.seed)
 
         t0 = time.time()
-        metrics = self.run_training_job(req.params, seed=req.seed, epochs=req.epochs)
+        
+        try:
+            metrics = self.run_training_job(req.params, seed=req.seed, epochs=req.epochs)
+        except RuntimeError as e:
+            # Handle CUDA OOM safely
+            if "out of memory" in str(e).lower():
+                print(f"[OOM] config_id={req.config_id} iter={req.iteration} epochs={req.epochs}")
+                if torch is not None and torch.cuda.is_available():
+                    torch.cuda.empty_cache()
+                metrics = {"val_loss": float("inf"), "train_loss": None}
+            else:
+                raise  # re-raise other runtime errors
+        except Exception as e:
+            # Catch-all protection (optional but recommended for long runs)
+            print(f"[ERROR] config_id={req.config_id} iter={req.iteration}: {e}")
+            metrics = {"val_loss": float("inf"), "train_loss": None}
+
         dt = time.time() - t0
 
         res = EvalResult(
