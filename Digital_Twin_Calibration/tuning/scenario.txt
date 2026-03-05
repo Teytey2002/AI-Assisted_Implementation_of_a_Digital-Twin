@@ -68,7 +68,7 @@ firstTest = 1
 ## family) and the block size is the number of classes. The value of
 ## `blockSize` will multiply `firstTest`, `eachTest` and
 ## `elitistNewInstances`.
-# blockSize = 1
+blockSize = 5
 
 ## Number of instances evaluated between elimination tests.
 eachTest = 1
@@ -117,7 +117,7 @@ deterministic = 0
 
 ## Maximum number of runs (invocations of `targetRunner`) that will be
 ## performed. It determines the maximum budget of experiments for the tuning.
-maxExperiments = 300
+maxExperiments = 500
 
 ## Minimum number of runs (invocations of `targetRunner`) that will be
 ## performed. It determines the minimum budget of experiments for the tuning.
@@ -178,7 +178,7 @@ elitist = 1
 
 ## Number of instances added to the execution list before previous instances
 ## in elitist irace.
-# elitistNewInstances = 1
+elitistNewInstances = 1
 
 ## In elitist irace, maximum number per race of elimination tests that do not
 ## eliminate a configuration. Use 0 for no limit.
