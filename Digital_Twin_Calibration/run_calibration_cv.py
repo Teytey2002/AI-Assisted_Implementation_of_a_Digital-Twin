@@ -54,7 +54,7 @@ def main() -> None:
 
     # Version to use NN, but maybe, no  needs LeaveOneExperimentOutCV
     # Mayby add argument to run with good simulation and calibrator by using arg in commadn line
-    calibrator = RCNeuralCalibrator.load("./src/dtcalib/deep_learning/models/rc_inverse_best_2026-02-23_15-56-57.pth")
+    calibrator = RCNeuralCalibrator.load("./src/dtcalib/deep_learning/models/rc_inverse_best_2026-03-09_10-11-18.pth")
     report = calibrator.calibrate(ds.experiments)
     print("NN Global C_hat:", report.theta_hat)
     print("Variance:", report.cost)

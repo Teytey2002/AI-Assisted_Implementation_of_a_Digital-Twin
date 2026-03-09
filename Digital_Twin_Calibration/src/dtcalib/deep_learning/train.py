@@ -1,8 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import os
-from torch.utils.data import DataLoader, random_split
+from torch.utils.data import DataLoader, Subset
 from torch.utils.tensorboard import SummaryWriter
 from pathlib import Path
 from datetime import datetime
@@ -10,6 +9,8 @@ import numpy as np
 
 from model import RCInverseCNN
 from dataset import RCSignalDataset
+
+from dtcalib.deep_learning.splits_utils import load_split, get_indices
 
 
 def train(root_dir: Path):
@@ -21,7 +22,8 @@ def train(root_dir: Path):
     print(f"Training on: {device}")
 
     batch_size = 32
-    lr = 1e-3
+    lr = 0.001753818
+    weight_decay = 3.27707e-05
     patience = 25
     max_epochs = 300
 
@@ -29,26 +31,24 @@ def train(root_dir: Path):
     # Dataset
     # -------------------------
     dataset = RCSignalDataset(root_dir)
+    dataset.set_target_transform("logC") # Fixe log(c) pour une meilleure convergence
 
-    n_total = len(dataset)
-    n_train = int(0.8 * n_total)
-    n_val = n_total - n_train
+    payload = load_split("./splits/rc_cv_fold0.json")
+    train_idx, val_idx, test_idx = get_indices(payload)
 
-    train_set, val_set = random_split(dataset, [n_train, n_val])
+    train_set = Subset(dataset, train_idx)
+    val_set = Subset(dataset, val_idx)
 
-    # IMPORTANT: compute normalization only on train
-    train_set.dataset.compute_normalization()
+    # IMPORTANT: compute normalization only on train indices
+    dataset.compute_normalization(indices=train_idx)
 
     # Apply same stats to both
-    stats = (
-        train_set.dataset.x_mean,
-        train_set.dataset.x_std,
-        train_set.dataset.y_mean,
-        train_set.dataset.y_std
+    dataset.set_normalization(
+        dataset.x_mean,
+        dataset.x_std,
+        dataset.y_mean,
+        dataset.y_std
     )
-
-    train_set.dataset.set_normalization(*stats)
-    val_set.dataset.set_normalization(*stats)
 
     train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True)
     val_loader = DataLoader(val_set, batch_size=batch_size)
@@ -58,13 +58,13 @@ def train(root_dir: Path):
     # -------------------------
     model = RCInverseCNN().to(device)
     criterion = nn.MSELoss()
-    optimizer = optim.Adam(model.parameters(), lr=lr)
+    optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
 
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
         optimizer,
         mode="min",
-        factor=0.8,
-        patience=10
+        factor=0.3882663,
+        patience=3
     )
 
     # -------------------------
@@ -127,7 +127,8 @@ def train(root_dir: Path):
         targets_all = np.concatenate(targets_all)
 
         rmse = np.sqrt(np.mean((preds_all - targets_all) ** 2))
-        rel_error = np.mean(np.abs((preds_all - targets_all) / targets_all)) * 100
+        eps = 1e-8
+        rel_error = np.mean(np.abs((preds_all - targets_all) / (np.abs(targets_all) + eps))) * 100
 
         scheduler.step(val_loss)
         current_lr = optimizer.param_groups[0]['lr']
