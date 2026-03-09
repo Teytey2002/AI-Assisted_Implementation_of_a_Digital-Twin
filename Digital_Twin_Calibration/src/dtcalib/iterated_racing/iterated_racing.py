@@ -85,12 +85,27 @@ class IteratedRacing:
                     res=res,
                 )
 
-            # ---- build scores matrix: configs x iterations_so_far ----
-            n = len(self.population)
+            # ---- build scores matrix: only eligible configs (full history) ----
             t = it + 1
-            scores = np.zeros((n, t), dtype=float)
-            for i, c in enumerate(self.population):
-                scores[i, :] = np.array(c.history, dtype=float)
+            eligible_idx = [i for i, c in enumerate(self.population) if len(c.history) == t]
+            eligible = [self.population[i] for i in eligible_idx]
+
+            # If not enough configs are eligible, keep everyone (no statistical test possible)
+            if len(eligible) < 2:
+                survivors = self.population
+                decision = None
+            else:
+                scores = np.array([c.history for c in eligible], dtype=float)  # (n_eligible, t)
+
+                decision = friedman_race(
+                    scores_matrix=scores,
+                    alpha=self.settings.alpha,
+                    keep_top_k=min(self.settings.keep_top_k[it], len(eligible)),
+                )
+
+                # decision.keep_indices are indices within `eligible`
+                keep_in_eligible = decision.keep_indices
+                survivors = [eligible[j] for j in keep_in_eligible]
 
             # ---- statistical elimination ----
             decision = friedman_race(
@@ -98,10 +113,13 @@ class IteratedRacing:
                 alpha=self.settings.alpha,
                 keep_top_k=self.settings.keep_top_k[it],
             )
-            keep_idx = decision.keep_indices
-            survivors = [self.population[i] for i in keep_idx]
             kept_ids = [c.id for c in survivors]
-            self.logger.log_decision(it, decision, kept_ids)
+            if decision is not None:
+                self.logger.log_decision(it, decision, kept_ids)
+            else:
+                # no decision (not enough eligible configs), log p_value=1.0 style decision
+                # simplest: skip decision logging or log a dummy one
+                pass
 
             # stop early if already small
             if len(survivors) <= self.settings.keep_top_k[-1]:
