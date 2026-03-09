@@ -13,7 +13,7 @@ class RCInverseCNN(nn.Module):
     def __init__(self):
         super().__init__()
 
-        self.conv1 = nn.Conv1d(2, 32, kernel_size=5, padding=2)
+        self.conv1 = nn.Conv1d(3, 32, kernel_size=5, padding=2)
         self.conv2 = nn.Conv1d(32, 64, kernel_size=5, padding=2)
         self.conv3 = nn.Conv1d(64, 128, kernel_size=5, padding=2)
 
@@ -26,7 +26,7 @@ class RCInverseCNN(nn.Module):
         self.fc2 = nn.Linear(64, 1)
 
     def forward(self, x):
-        # x: [batch, 2, T]
+        # x: [batch, 3, T]
 
         x = self.pool(F.relu(self.conv1(x)))
         x = self.pool(F.relu(self.conv2(x)))

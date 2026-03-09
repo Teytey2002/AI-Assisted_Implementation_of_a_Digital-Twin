@@ -9,9 +9,22 @@ import numpy as np
 
 from model import RCInverseCNN
 from dataset import RCSignalDataset
+import random
 
 from dtcalib.deep_learning.splits_utils import load_split, get_indices
+from dtcalib.calibration import NormalizationStats
 
+
+# Important for reproductibility and comparaison
+def set_seed(seed: int = 42):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+
+set_seed(42)
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False
 
 def train(root_dir: Path):
 
@@ -50,8 +63,15 @@ def train(root_dir: Path):
         dataset.y_std
     )
 
-    train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True)
-    val_loader = DataLoader(val_set, batch_size=batch_size)
+    stats = NormalizationStats(
+        x_mean=dataset.x_mean.clone(),
+        x_std=dataset.x_std.clone(),
+        y_mean=dataset.y_mean.clone(),
+        y_std=dataset.y_std.clone(),
+    )
+
+    train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True, pin_memory=True)
+    val_loader = DataLoader(val_set, batch_size=batch_size, shuffle=False, pin_memory=True)
 
     # -------------------------
     # Model
@@ -90,7 +110,7 @@ def train(root_dir: Path):
         train_loss = 0.0
 
         for x, y in train_loader:
-            x, y = x.to(device), y.to(device)
+            x, y = x.to(device, non_blocking=True), y.to(device, non_blocking=True)
 
             pred = model(x)
             loss = criterion(pred, y)
@@ -112,7 +132,7 @@ def train(root_dir: Path):
 
         with torch.no_grad():
             for x, y in val_loader:
-                x, y = x.to(device), y.to(device)
+                x, y = x.to(device, non_blocking=True), y.to(device, non_blocking=True)
                 pred = model(x)
 
                 loss = criterion(pred, y)
@@ -123,12 +143,16 @@ def train(root_dir: Path):
 
         val_loss /= len(val_loader)
 
-        preds_all = np.concatenate(preds_all)
-        targets_all = np.concatenate(targets_all)
+        preds_all = torch.tensor(np.concatenate(preds_all), dtype=torch.float32)
+        targets_all = torch.tensor(np.concatenate(targets_all), dtype=torch.float32)
 
-        rmse = np.sqrt(np.mean((preds_all - targets_all) ** 2))
-        eps = 1e-8
-        rel_error = np.mean(np.abs((preds_all - targets_all) / (np.abs(targets_all) + eps))) * 100
+        preds_C = stats.y_norm_to_C(preds_all)
+        targets_C = stats.y_norm_to_C(targets_all)
+
+        rmse = torch.sqrt(torch.mean((preds_C - targets_C) ** 2)).item()
+        rel_error = (
+            torch.mean(torch.abs((preds_C - targets_C) / (torch.abs(targets_C) + 1e-12))) * 100
+        ).item()
 
         scheduler.step(val_loss)
         current_lr = optimizer.param_groups[0]['lr']
@@ -155,8 +179,8 @@ def train(root_dir: Path):
             torch.save(
             {
                 "model_state_dict": model.state_dict(),
-                "x_mean": train_set.dataset.x_mean,   # shape [2]
-                "x_std": train_set.dataset.x_std,     # shape [2]
+                "x_mean": train_set.dataset.x_mean,   # shape [3]
+                "x_std": train_set.dataset.x_std,     # shape [3]
                 "y_mean": train_set.dataset.y_mean,   # scalar
                 "y_std": train_set.dataset.y_std,     # scalar
                 "model_class": "RCInverseCNN",

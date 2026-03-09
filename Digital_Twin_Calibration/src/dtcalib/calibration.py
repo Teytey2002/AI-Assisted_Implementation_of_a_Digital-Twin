@@ -236,16 +236,36 @@ class BayesianMAPCalibrator(LeastSquaresCalibrator):
 
 @dataclass(frozen=True)
 class NormalizationStats:
-    x_mean: torch.Tensor  # shape [2]
-    x_std: torch.Tensor   # shape [2]
+    x_mean: torch.Tensor  # shape [3]
+    x_std: torch.Tensor   # shape [3]
     y_mean: torch.Tensor  # scalar
     y_std: torch.Tensor   # scalar
+
+    def denormalize_y(self, y_norm: torch.Tensor) -> torch.Tensor:
+        """
+        Convert normalized target back to log(C).
+        """
+        return y_norm * self.y_std + self.y_mean
+
+    def inverse_target_transform(self, y_log: torch.Tensor) -> torch.Tensor:
+        """
+        Convert log(C) back to C in Farads.
+        """
+        return torch.exp(y_log)
+
+    def y_norm_to_C(self, y_norm: torch.Tensor) -> torch.Tensor:
+        """
+        Full inverse pipeline:
+        normalized y -> log(C) -> C
+        """
+        y_log = self.denormalize_y(y_norm)
+        return self.inverse_target_transform(y_log)
 
 
 class RCNeuralCalibrator:
     """
     Neural inverse calibrator:
-      input  : Vin(t), Vout(t)
+      input  : time(t), Vin(t), Vout(t)
       output : C_hat in Farads
 
     Assumption:
@@ -289,30 +309,23 @@ class RCNeuralCalibrator:
 
     def _normalize_x(self, x: torch.Tensor) -> torch.Tensor:
         """
-        x: [2, T] or [B, 2, T]
+        x: [3, T] or [B, 3, T]
         """
         if x.ndim == 2:
             return (x - self.stats.x_mean[:, None]) / self.stats.x_std[:, None]
         if x.ndim == 3:
             return (x - self.stats.x_mean[None, :, None]) / self.stats.x_std[None, :, None]
-        raise ValueError(f"Expected x with shape [2,T] or [B,2,T], got {tuple(x.shape)}")
+        raise ValueError(f"Expected x with shape [3,T] or [B,3,T], got {tuple(x.shape)}")
 
     def _denormalize_y(self, y_norm: torch.Tensor) -> torch.Tensor:
-        """
-        y_norm: [B] or scalar tensor
-        Returns log(C), because the model was trained on log(C).
-        """
-        return y_norm * self.stats.y_std + self.stats.y_mean
+        return self.stats.denormalize_y(y_norm)
 
     def _inverse_target_transform(self, y_log: torch.Tensor) -> torch.Tensor:
-        """
-        Model target is log(C) with natural logarithm.
-        So we return C = exp(logC).
-        """
-        return torch.exp(y_log)
+        return self.stats.inverse_target_transform(y_log)
 
     def predict_logC(
         self,
+        time: Union[np.ndarray, torch.Tensor],
         vin: Union[np.ndarray, torch.Tensor],
         vout: Union[np.ndarray, torch.Tensor],
     ) -> float:
@@ -329,15 +342,20 @@ class RCNeuralCalibrator:
             vout_t = torch.tensor(vout, dtype=torch.float32)
         else:
             vout_t = vout.float()
+        
+        if isinstance(time, np.ndarray):
+            time_t = torch.tensor(time, dtype=torch.float32)
+        else:
+            time_t = time.float()
 
-        if vin_t.ndim != 1 or vout_t.ndim != 1:
-            raise ValueError("vin and vout must be 1D arrays (shape [T]).")
-        if vin_t.shape[0] != vout_t.shape[0]:
-            raise ValueError("vin and vout must have the same length T.")
+        if vin_t.ndim != 1 or vout_t.ndim != 1 or time_t.ndim != 1:
+            raise ValueError("vin and vout and time must be 1D arrays (shape [T]).")
+        if not (vin_t.shape[0] == vout_t.shape[0] == time_t.shape[0]):
+            raise ValueError("vin and vout and time must have the same length T.")
 
-        x = torch.stack([vin_t, vout_t], dim=0).to(self.device)  # [2, T]
+        x = torch.stack([time_t, vin_t, vout_t], dim=0).to(self.device)  # [3, T]
         x = self._normalize_x(x)
-        x = x.unsqueeze(0)  # [1, 2, T]
+        x = x.unsqueeze(0)  # [1, 3, T]
 
         with torch.no_grad():
             y_norm = self.model(x).reshape(-1)   # [1]
@@ -347,6 +365,7 @@ class RCNeuralCalibrator:
 
     def predict(
         self,
+        time: Union[np.ndarray, torch.Tensor],
         vin: Union[np.ndarray, torch.Tensor],
         vout: Union[np.ndarray, torch.Tensor],
     ) -> float:
@@ -363,15 +382,20 @@ class RCNeuralCalibrator:
             vout_t = torch.tensor(vout, dtype=torch.float32)
         else:
             vout_t = vout.float()
+        
+        if isinstance(time, np.ndarray):
+            time_t = torch.tensor(time, dtype=torch.float32)
+        else:
+            time_t = time.float()
 
-        if vin_t.ndim != 1 or vout_t.ndim != 1:
-            raise ValueError("vin and vout must be 1D arrays (shape [T]).")
-        if vin_t.shape[0] != vout_t.shape[0]:
-            raise ValueError("vin and vout must have the same length T.")
+        if vin_t.ndim != 1 or vout_t.ndim != 1 or time_t.ndim != 1:
+            raise ValueError("vin and vout and time must be 1D arrays (shape [T]).")
+        if not (vin_t.shape[0] == vout_t.shape[0] == time_t.shape[0]):
+            raise ValueError("vin and vout and time must have the same length T.")
 
-        x = torch.stack([vin_t, vout_t], dim=0).to(self.device)  # [2, T]
+        x = torch.stack([time_t, vin_t, vout_t], dim=0).to(self.device)  # [3, T]
         x = self._normalize_x(x)
-        x = x.unsqueeze(0)  # [1, 2, T]
+        x = x.unsqueeze(0)  # [1, 3, T]
 
         with torch.no_grad():
             y_norm = self.model(x).reshape(-1)    # [1]
@@ -402,7 +426,7 @@ class RCNeuralCalibrator:
         C_predictions: List[float] = []
 
         for exp in experiments:
-            C_i = self.predict(exp.u, exp.y)
+            C_i = self.predict(exp.t, exp.u, exp.y)
             C_predictions.append(C_i)
 
         C_array = np.asarray(C_predictions, dtype=float)

@@ -30,10 +30,6 @@ CV summary: {'rmse_mean': 0.12766043804837987, 'rmse_std': 0.053928352511705725,
 
 
 
-
-
-
-
 Dataset Used : LP_Dataset_csv_C_Modified
 Parameters used : 
     # ---------- Chose the simulator ---------- #
@@ -69,16 +65,49 @@ CV summary: {'rmse_mean': 0.12766139677630703, 'rmse_std': 0.05392638873152219, 
 
 
 
+Premier résultat du train avec la best config mais sans la colonne de temps : 
+On utilise le script inferance.py, crée pour ça
+n_train=3200 | n_val=799 | n_test=1000
 
-Dataset Used : LP_Dataset_csv_C_Modified
-Parameters used : 
-    calibrator = RCNeuralCalibrator.load("./src/dtcalib/deep_learning/models/rc_inverse_best_2026-02-23_15-56-57.pth")
-    report = calibrator.calibrate(ds.experiments)
-    print("NN Global C_hat:", report.theta_hat)
-    print("Variance:", report.cost)
+[1] Test metrics on individual samples
+- RMSE(C)         = 9.394120e-07 F
+- MAE(C)          = 7.473696e-07 F
+- MAPE(C)         = 32.063 %
+- RMSE(logC)      = 4.536467e-01
+- MAE(logC)       = 3.780696e-01
 
-C preds: min/max/mean/std = 1.105060050576867e-06 2.268858906973037e-06 1.7113528519985267e-06 1.9764372428351368e-07
-y stats: min= -2.49861516 max= 2.49861393 std= 1.7650717940862473
-u stats: min= -5.0 max= 5.0 std= 3.531122757068164
-NN Global C_hat: [1.71135285e-06]
-Variance: 3.9063041748657576e-14
+[2] Global aggregated estimate on test set
+- Aggregate       = mean
+- Global C_hat    = 1.581717e-06 F
+
+[3] Predictions summary
+- true_C min/max/mean/std = 9.215620e-07 / 3.200000e-06 / 2.139709e-06 / 7.946141e-07
+- pred_C min/max/mean/std = 1.325554e-06 / 2.344318e-06 / 1.581717e-06 / 2.213095e-07
+
+[4] CSV saved: src/dtcalib/deep_learning/models/rc_inverse_best_2026-03-09_13-30-50_test_predictions.csv
+
+
+
+
+Résultat obtenue avec l'ajout de la colonne temporelle 
+n_train=3200 | n_val=799 | n_test=1000
+
+[1] Sample-level metrics
+- RMSE(C)         = 8.505768e-08 F
+- MAE(C)          = 5.220808e-08 F
+- MAPE(C)         = 2.106 %
+
+[2] Capacity-level aggregated metrics
+- Aggregation     = mean
+- #capacities     = 10
+- RMSE(C)         = 3.582215e-08 F
+- MAE(C)          = 2.643013e-08 F
+- MAPE(C)         = 0.993 %
+
+[3] Sample-level prediction summary
+- true_C min/max/mean/std = 9.215620e-07 / 3.200000e-06 / 2.139709e-06 / 7.946141e-07
+- pred_C min/max/mean/std = 9.059750e-07 / 3.360867e-06 / 2.116401e-06 / 7.718410e-07
+
+[4] Aggregated prediction summary by true capacity
+- true_C min/max/mean/std = 9.215620e-07 / 3.200000e-06 / 2.139709e-06 / 7.946141e-07
+- pred_C min/max/mean/std = 9.279517e-07 / 3.140116e-06 / 2.116401e-06 / 7.679759e-07

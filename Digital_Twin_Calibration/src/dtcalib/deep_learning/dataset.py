@@ -4,6 +4,7 @@ import pandas as pd
 from pathlib import Path
 import re
 import numpy as np
+from dtcalib.deep_learning.splits_utils import parse_samples
 
 
 class RCSignalDataset(Dataset):
@@ -17,40 +18,10 @@ class RCSignalDataset(Dataset):
                 results_....csv
     """
     def __init__(self, root_dir: Path, target_transform: str = "C"):
-        self.samples = []
-
         root_dir = Path(root_dir)
 
-        for c_folder in sorted(root_dir.iterdir()):
-            #print("c_folder = ", c_folder)
-            if not c_folder.is_dir():
-                continue
-
-            # Extract C from folder name like: dataset_+c_1p0032em06
-            # on capture 1p0032em06 et on convertit en 1.0032e-06
-            match = re.search(r"\+c_([0-9p]+e[m|p][0-9]+)", c_folder.name)
-            if match is None:
-                #print("match none, je continue")
-                continue
-
-            c_token = match.group(1)  # ex: "1p0032em06"
-            c_str = (c_token.replace("p", ".").replace("em", "e-").replace("ep", "e+"))
-            C_value = float(c_str)
-
-            for csv_file in sorted(c_folder.rglob("*.csv")):
-                #print("csv_file", csv_file)
-                if "results" not in csv_file.name.lower():  # Au cas ou un csv de log ou autre se trouve un mauvais endroit
-                    continue
-                self.samples.append((csv_file, C_value))
-
-        # For debug        
-        #print(f"[RCSignalDataset] root_dir={root_dir}")
-        #print(f"[RCSignalDataset] found {len(self.samples)} samples")
-        #if len(self.samples) == 0:
-        #    # show first few folder names to debug regex
-        #    subdirs = [p.name for p in Path(root_dir).iterdir() if p.is_dir()]
-        #    print("[RCSignalDataset] first subdirs:", subdirs[:10])
-            
+        parsed = parse_samples(root_dir)
+        self.samples = [(Path(csv_path), C_value) for csv_path, C_value in parsed]         
 
         # Target transform mode
         # "C"   -> y = C
@@ -63,6 +34,9 @@ class RCSignalDataset(Dataset):
         self.x_std = None
         self.y_mean = None
         self.y_std = None
+
+        # Cache to put the dataset 
+        self.cache = {}
     
     # ----------------------------------------------------
     # Target transform
@@ -95,10 +69,11 @@ class RCSignalDataset(Dataset):
         for csv_path, C_value in iter_samples:
             df = pd.read_csv(csv_path)
 
-            Vin = df.iloc[:, 1].values
+            time = df.iloc[:, 0].values
+            Vin  = df.iloc[:, 1].values
             Vout = df.iloc[:, 2].values
 
-            x = np.stack([Vin, Vout], axis=0)
+            x = np.stack([time, Vin, Vout], axis=0)
             xs.append(x)
             ys.append(self._transform_y(C_value))
 
@@ -126,12 +101,16 @@ class RCSignalDataset(Dataset):
     def __getitem__(self, idx):
         csv_path, C_value = self.samples[idx]
 
-        df = pd.read_csv(csv_path)
+        if csv_path not in self.cache:
+            df = pd.read_csv(csv_path)
+            time = torch.tensor(df.iloc[:, 0].values, dtype=torch.float32)
+            Vin  = torch.tensor(df.iloc[:, 1].values, dtype=torch.float32)
+            Vout = torch.tensor(df.iloc[:, 2].values, dtype=torch.float32)
+            self.cache[csv_path] = (time, Vin, Vout)
 
-        Vin = torch.tensor(df.iloc[:, 1].values, dtype=torch.float32)
-        Vout = torch.tensor(df.iloc[:, 2].values, dtype=torch.float32)
+        time, Vin, Vout = self.cache[csv_path]
 
-        x = torch.stack([Vin, Vout], dim=0)  # [2, T]
+        x = torch.stack([time, Vin, Vout], dim=0)  # [3, T]
         y_value = self._transform_y(C_value)
         y = torch.tensor(y_value, dtype=torch.float32)
         
