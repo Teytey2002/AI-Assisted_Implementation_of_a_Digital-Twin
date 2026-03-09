@@ -52,22 +52,14 @@ def run_inference(
     payload = load_split(split_json_path)
     train_idx, val_idx, test_idx = get_indices(payload)
 
-    if len(test_idx) > 0:
-        eval_idx = test_idx
-        eval_name = "test"
-    else:
-        eval_idx = val_idx
-        eval_name = "val"
-
-    if len(eval_idx) == 0:
-        raise ValueError("The split does not contain any evaluation indices (val/test).")
+    if len(test_idx) == 0:
+        raise ValueError("The split does not contain any test indices.")
 
     print(f"n_train={len(train_idx)} | n_val={len(val_idx)} | n_test={len(test_idx)}")
-    print(f"Using '{eval_name}' split for inference: n_eval={len(eval_idx)}")
 
     rows = []
 
-    for idx in eval_idx:
+    for idx in test_idx:
         csv_path, true_C = dataset.samples[idx]
 
         df = pd.read_csv(csv_path)

@@ -33,7 +33,7 @@ def train(root_dir: Path):
     dataset = RCSignalDataset(root_dir)
     dataset.set_target_transform("logC") # Fixe log(c) pour une meilleure convergence
 
-    payload = load_split("./splits/rc_cv_fold0.json")
+    payload = load_split("./splits/rc_nested_fold0.json")
     train_idx, val_idx, test_idx = get_indices(payload)
 
     train_set = Subset(dataset, train_idx)
