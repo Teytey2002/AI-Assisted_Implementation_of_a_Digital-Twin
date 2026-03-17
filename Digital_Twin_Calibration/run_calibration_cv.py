@@ -5,7 +5,7 @@ import numpy as np
 
 from dtcalib.data import ExperimentsDataset
 from dtcalib.simulation import ExampleRCCircuitSimulator, LowPassR1CR2Simulator
-from dtcalib.calibration import LeastSquaresCalibrator, BayesianMAPCalibrator, RCNeuralCalibrator
+from dtcalib.calibration import LeastSquaresCalibrator, BayesianMAPCalibrator, RCNeuralCalibrator, ParticleSwarmCalibrator
 from dtcalib.validation import LeaveOneExperimentOutCV
 from dtcalib.calibration import GeneticAlgorithmCalibrator
 
@@ -38,14 +38,25 @@ def main() -> None:
     #    sigma_y=1.0,
     #)
 
-    calibrator = GeneticAlgorithmCalibrator(
-        simulator=simulator,
-        population_size=80,
-        n_generations=120,
-        crossover_rate=0.9,
-        mutation_rate=0.2,
-        mutation_scale=0.1,
-        elite_fraction=0.1,
+    #calibrator = GeneticAlgorithmCalibrator(
+    #    simulator=simulator,
+    #    population_size=80,
+    #    n_generations=120,
+    #    crossover_rate=0.9,
+    #    mutation_rate=0.2,
+    #    mutation_scale=0.1,
+    #    elite_fraction=0.1,
+    #    seed=42,
+    #    polish=True,
+    #)
+
+    calibrator = ParticleSwarmCalibrator(
+        simulator,
+        swarm_size=40,
+        n_iterations=100,
+        inertia=0.7,
+        cognitive=1.5,
+        social=1.5,
         seed=42,
         polish=True,
     )

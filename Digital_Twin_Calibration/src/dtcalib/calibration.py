@@ -454,6 +454,245 @@ class GeneticAlgorithmCalibrator:
         )
 
 
+class ParticleSwarmCalibrator:
+    """
+    Particle Swarm Optimization (PSO) calibrator.
+
+    Each particle is a candidate parameter vector theta.
+    The swarm evolves using:
+      - inertia        : keeps previous motion
+      - cognitive term : attraction toward particle's personal best
+      - social term    : attraction toward global best
+
+    Objective:
+      minimize 0.5 * sum_i w_i * || y_i - sim(t_i,u_i;theta) ||^2
+    """
+
+    def __init__(
+        self,
+        simulator: Simulator,
+        *,
+        swarm_size: int = 40,
+        n_iterations: int = 100,
+        inertia: float = 0.7,
+        cognitive: float = 1.5,
+        social: float = 1.5,
+        velocity_clamp: Optional[float] = 0.2,
+        seed: Optional[int] = None,
+        polish: bool = True,
+        polish_method: str = "trf",
+        polish_loss: str = "linear",
+        polish_f_scale: float = 1.0,
+    ) -> None:
+        self._sim = simulator
+        self._swarm_size = int(swarm_size)
+        self._n_iterations = int(n_iterations)
+        self._inertia = float(inertia)
+        self._cognitive = float(cognitive)
+        self._social = float(social)
+        self._velocity_clamp = None if velocity_clamp is None else float(velocity_clamp)
+        self._seed = seed
+        self._polish = bool(polish)
+
+        self._polish_method = polish_method
+        self._polish_loss = polish_loss
+        self._polish_f_scale = float(polish_f_scale)
+
+        if self._swarm_size < 2:
+            raise ValueError("swarm_size must be >= 2.")
+        if self._n_iterations < 1:
+            raise ValueError("n_iterations must be >= 1.")
+        if self._inertia < 0:
+            raise ValueError("inertia must be >= 0.")
+        if self._cognitive < 0:
+            raise ValueError("cognitive must be >= 0.")
+        if self._social < 0:
+            raise ValueError("social must be >= 0.")
+        if self._velocity_clamp is not None and self._velocity_clamp <= 0:
+            raise ValueError("velocity_clamp must be > 0 when provided.")
+
+    def calibrate(
+        self,
+        experiments: Sequence[Experiment],
+        *,
+        theta0: np.ndarray,
+        bounds: Optional[Tuple[np.ndarray, np.ndarray]] = None,
+        weights: Optional[Sequence[float]] = None,
+        max_nfev: Optional[int] = None,
+    ) -> CalibrationReport:
+        if len(experiments) == 0:
+            raise ValueError("Need at least one experiment.")
+
+        theta0 = np.asarray(theta0, dtype=float)
+        if theta0.ndim != 1:
+            raise ValueError("theta0 must be a 1D array.")
+
+        if weights is not None and len(weights) != len(experiments):
+            raise ValueError("weights must match number of experiments.")
+        w = np.ones(len(experiments), dtype=float) if weights is None else np.asarray(weights, dtype=float)
+
+        if bounds is None:
+            raise ValueError("ParticleSwarmCalibrator requires finite bounds.")
+        lb = np.asarray(bounds[0], dtype=float)
+        ub = np.asarray(bounds[1], dtype=float)
+
+        if lb.shape != theta0.shape or ub.shape != theta0.shape:
+            raise ValueError("bounds must have the same shape as theta0.")
+        if np.any(~np.isfinite(lb)) or np.any(~np.isfinite(ub)):
+            raise ValueError("ParticleSwarmCalibrator requires finite bounds.")
+        if np.any(lb >= ub):
+            raise ValueError("Each lower bound must be strictly smaller than upper bound.")
+        if np.any(theta0 < lb) or np.any(theta0 > ub):
+            raise ValueError("Initial guess is outside of provided bounds.")
+
+        rng = np.random.default_rng(self._seed)
+        dim = theta0.size
+        span = ub - lb
+
+        nfev = 0
+
+        def objective(theta: np.ndarray) -> float:
+            nonlocal nfev
+            nfev += 1
+
+            total = 0.0
+            for i, exp in enumerate(experiments):
+                sim_out = self._sim.simulate(exp.t, exp.u, theta).y
+                r = exp.y - sim_out
+                total += w[i] * float(np.dot(r, r))
+            return 0.5 * total
+
+        def residuals(theta: np.ndarray) -> np.ndarray:
+            parts: List[np.ndarray] = []
+            for i, exp in enumerate(experiments):
+                sim_out = self._sim.simulate(exp.t, exp.u, theta).y
+                parts.append(np.sqrt(w[i]) * (exp.y - sim_out))
+            return np.concatenate(parts, axis=0)
+
+        # --------------------------------------------------
+        # Swarm initialization
+        # --------------------------------------------------
+        positions = rng.uniform(lb, ub, size=(self._swarm_size, dim))
+        positions[0] = theta0.copy()
+
+        velocities = rng.uniform(-span, span, size=(self._swarm_size, dim)) * 0.1
+
+        if self._velocity_clamp is not None:
+            vmax = self._velocity_clamp * span
+            velocities = np.clip(velocities, -vmax, vmax)
+        else:
+            vmax = None
+
+        pbest_positions = positions.copy()
+        pbest_costs = np.empty(self._swarm_size, dtype=float)
+
+        for i in range(self._swarm_size):
+            if max_nfev is not None and nfev >= max_nfev:
+                break
+            pbest_costs[i] = objective(positions[i])
+
+        # In rare case max_nfev is tiny
+        if np.any(~np.isfinite(pbest_costs)):
+            # fallback safe init
+            for i in range(self._swarm_size):
+                if not np.isfinite(pbest_costs[i]):
+                    pbest_costs[i] = np.inf
+
+        gbest_idx = int(np.argmin(pbest_costs))
+        gbest_position = pbest_positions[gbest_idx].copy()
+        gbest_cost = float(pbest_costs[gbest_idx])
+
+        stop_reason = "Maximum iterations reached."
+        success = True
+
+        # --------------------------------------------------
+        # Main PSO loop
+        # --------------------------------------------------
+        for _ in range(self._n_iterations):
+            if max_nfev is not None and nfev >= max_nfev:
+                stop_reason = "Maximum number of function evaluations reached."
+                success = True
+                break
+
+            r1 = rng.random(size=(self._swarm_size, dim))
+            r2 = rng.random(size=(self._swarm_size, dim))
+
+            cognitive_term = self._cognitive * r1 * (pbest_positions - positions)
+            social_term = self._social * r2 * (gbest_position[None, :] - positions)
+
+            velocities = self._inertia * velocities + cognitive_term + social_term
+
+            if vmax is not None:
+                velocities = np.clip(velocities, -vmax, vmax)
+
+            positions = positions + velocities
+            positions = np.clip(positions, lb, ub)
+
+            for i in range(self._swarm_size):
+                if max_nfev is not None and nfev >= max_nfev:
+                    stop_reason = "Maximum number of function evaluations reached."
+                    break
+
+                cost_i = objective(positions[i])
+
+                if cost_i < pbest_costs[i]:
+                    pbest_costs[i] = cost_i
+                    pbest_positions[i] = positions[i].copy()
+
+                    if cost_i < gbest_cost:
+                        gbest_cost = float(cost_i)
+                        gbest_position = positions[i].copy()
+
+            if max_nfev is not None and nfev >= max_nfev:
+                break
+
+        theta_hat = gbest_position.copy()
+        final_cost = gbest_cost
+        message = f"PSO finished. {stop_reason}"
+
+        # --------------------------------------------------
+        # Optional local refinement
+        # --------------------------------------------------
+        if self._polish and (max_nfev is None or nfev < max_nfev):
+            remaining_nfev = None if max_nfev is None else max(max_nfev - nfev, 1)
+
+            result = least_squares(
+                residuals,
+                theta_hat,
+                bounds=(lb, ub),
+                method=self._polish_method,
+                loss=self._polish_loss,
+                f_scale=self._polish_f_scale,
+                max_nfev=remaining_nfev,
+            )
+
+            nfev += int(result.nfev)
+
+            if float(result.cost) < final_cost:
+                theta_hat = result.x.astype(float)
+                final_cost = float(result.cost)
+                success = bool(result.success)
+                message = f"PSO + polish finished. {result.message}"
+            else:
+                message = "PSO finished. Local polish did not improve the solution."
+
+        # --------------------------------------------------
+        # Diagnostics
+        # --------------------------------------------------
+        per_metrics: List[tuple[str, MetricsResult]] = []
+        for exp in experiments:
+            yhat = self._sim.simulate(exp.t, exp.u, theta_hat).y
+            per_metrics.append((exp.name, Metrics.compute(exp.y, yhat)))
+
+        return CalibrationReport(
+            theta_hat=np.asarray(theta_hat, dtype=float),
+            cost=float(final_cost),
+            success=bool(success),
+            message=str(message),
+            nfev=int(nfev),
+            per_experiment_metrics=per_metrics,
+        )
+
 
 
 # -----------------------------------------------------------
