@@ -11,7 +11,7 @@ from dtcalib.deep_learning.splits_utils import load_split
 
 
 DATA_ROOT = Path("./data/ALL_LP_DATASETS_CSV_Deep_learning")
-SPLIT_JSON = Path("./src/dtcalib/deep_learning/splits/rc_split_seed42_70_15_15.json")
+SPLIT_JSON = Path("./src/dtcalib/deep_learning/splits/rc_nested_fold0.json")
 
 
 # ==========================================================
@@ -30,8 +30,8 @@ def test_sample_shape_and_types():
     assert isinstance(x, torch.Tensor)
     assert isinstance(y, torch.Tensor)
 
-    assert x.ndim == 2  # [2, T]
-    assert x.shape[0] == 2
+    assert x.ndim == 2  # [3, T]
+    assert x.shape[0] == 3
     assert y.ndim == 0  # scalar
 
 
@@ -90,7 +90,7 @@ def test_normalization_train_mean_zero():
     xs = []
     ys = []
 
-    for idx in train_idx[:200]:  # sample subset for speed
+    for idx in train_idx:  
         x, y = ds[idx]
         xs.append(x.numpy())
         ys.append(y.item())
@@ -98,9 +98,9 @@ def test_normalization_train_mean_zero():
     xs = np.concatenate(xs, axis=1)
     ys = np.array(ys)
 
-    # Mean should be close to 0
+    # Mean should be close to 0 on the same set used to compute normalization
     assert np.allclose(xs.mean(axis=1), 0.0, atol=1e-2)
-    assert abs(ys.mean()) < 0.05
+    assert np.allclose(ys.mean(), 0.0, atol=1e-2)
 
 
 def test_val_not_used_in_train_normalization():
