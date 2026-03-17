@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 
 from dtcalib.data import Experiment
-from dtcalib.calibration import LeastSquaresCalibrator, BayesianMAPCalibrator
+from dtcalib.calibration import LeastSquaresCalibrator, BayesianMAPCalibrator, GeneticAlgorithmCalibrator
 from dtcalib.simulation import ExampleRCCircuitSimulator
 
 
@@ -198,3 +198,139 @@ def test_prior_dimension_mismatch_raises():
             prior_mean=np.array([0.1]),
             prior_std=np.array([0.1, 0.2])  # wrong size
         )
+
+
+# ------------------------------------------------------------
+# Genetic Algorithm tests
+# ------------------------------------------------------------
+
+def test_ga_calibration_recovers_true_tau():
+    true_tau = 0.15
+    exp = _generate_experiment(true_tau)
+
+    simulator = ExampleRCCircuitSimulator(use_tau=True)
+    calibrator = GeneticAlgorithmCalibrator(
+        simulator,
+        population_size=50,
+        n_generations=80,
+        crossover_rate=0.9,
+        mutation_rate=0.2,
+        mutation_scale=0.1,
+        elite_fraction=0.1,
+        seed=42,
+        polish=True,
+    )
+
+    report = calibrator.calibrate(
+        experiments=[exp],
+        theta0=np.array([0.05]),
+        bounds=(np.array([0.01]), np.array([1.0])),
+        max_nfev=5000,
+    )
+
+    assert report.success
+    assert report.theta_hat.shape == (1,)
+    assert report.theta_hat[0] == pytest.approx(true_tau, rel=5e-2)
+
+
+def test_ga_no_experiments_raises():
+    simulator = ExampleRCCircuitSimulator(use_tau=True)
+    calibrator = GeneticAlgorithmCalibrator(simulator, seed=42)
+
+    with pytest.raises(ValueError, match="Need at least one experiment"):
+        calibrator.calibrate(
+            experiments=[],
+            theta0=np.array([0.1]),
+            bounds=(np.array([0.01]), np.array([1.0])),
+        )
+
+
+def test_ga_weights_length_mismatch_raises():
+    exp = _generate_experiment(0.1)
+
+    simulator = ExampleRCCircuitSimulator(use_tau=True)
+    calibrator = GeneticAlgorithmCalibrator(simulator, seed=42)
+
+    with pytest.raises(ValueError, match="weights must match"):
+        calibrator.calibrate(
+            experiments=[exp],
+            theta0=np.array([0.1]),
+            bounds=(np.array([0.01]), np.array([1.0])),
+            weights=[1.0, 2.0],
+        )
+
+
+def test_ga_requires_finite_bounds():
+    exp = _generate_experiment(0.2)
+
+    simulator = ExampleRCCircuitSimulator(use_tau=True)
+    calibrator = GeneticAlgorithmCalibrator(simulator, seed=42)
+
+    with pytest.raises(ValueError):
+        calibrator.calibrate(
+            experiments=[exp],
+            theta0=np.array([0.1]),
+            bounds=None,
+        )
+
+
+def test_ga_bounds_enforce_positive_tau():
+    true_tau = 0.2
+    exp = _generate_experiment(true_tau)
+
+    simulator = ExampleRCCircuitSimulator(use_tau=True)
+    calibrator = GeneticAlgorithmCalibrator(
+        simulator,
+        population_size=40,
+        n_generations=60,
+        seed=42,
+        polish=True,
+    )
+
+    report = calibrator.calibrate(
+        experiments=[exp],
+        theta0=np.array([0.12]),
+        bounds=(np.array([0.1]), np.array([0.3])),
+        max_nfev=4000,
+    )
+
+    assert report.success
+    assert report.theta_hat[0] >= 0.1
+    assert report.theta_hat[0] <= 0.3
+
+
+def test_ga_is_reproducible_with_fixed_seed():
+    true_tau = 0.18
+    exp = _generate_experiment(true_tau)
+
+    simulator = ExampleRCCircuitSimulator(use_tau=True)
+
+    cal1 = GeneticAlgorithmCalibrator(
+        simulator,
+        population_size=40,
+        n_generations=60,
+        seed=123,
+        polish=False,
+    )
+    cal2 = GeneticAlgorithmCalibrator(
+        simulator,
+        population_size=40,
+        n_generations=60,
+        seed=123,
+        polish=False,
+    )
+
+    report1 = cal1.calibrate(
+        experiments=[exp],
+        theta0=np.array([0.05]),
+        bounds=(np.array([0.01]), np.array([1.0])),
+        max_nfev=3000,
+    )
+    report2 = cal2.calibrate(
+        experiments=[exp],
+        theta0=np.array([0.05]),
+        bounds=(np.array([0.01]), np.array([1.0])),
+        max_nfev=3000,
+    )
+
+    assert report1.theta_hat[0] == pytest.approx(report2.theta_hat[0], rel=1e-12, abs=1e-12)

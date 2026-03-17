@@ -226,6 +226,232 @@ class BayesianMAPCalibrator(LeastSquaresCalibrator):
         )
 
 
+class GeneticAlgorithmCalibrator:
+    """
+    Genetic algorithm for parameter calibration.
+
+    Objective:
+      theta_hat = argmin_theta sum_i w_i * || y_i - sim(t_i,u_i;theta) ||^2
+
+    Notes:
+      - this optimizer is derivative-free
+      - bounds are required because the population is sampled inside them
+      - the returned ``cost`` follows the same convention as LeastSquaresCalibrator:
+        0.5 * sum(residuals**2)
+    """
+
+    def __init__(
+        self,
+        simulator: Simulator,
+        *,
+        population_size: int = 80,
+        n_generations: int = 120,
+        crossover_rate: float = 0.9,
+        mutation_rate: float = 0.2,
+        mutation_scale: float = 0.1,
+        elite_fraction: float = 0.1,
+        tournament_size: int = 3,
+        seed: Optional[int] = None,
+        polish: bool = True,
+    ) -> None:
+        self._sim = simulator
+        self._population_size = int(population_size)
+        self._n_generations = int(n_generations)
+        self._crossover_rate = float(crossover_rate)
+        self._mutation_rate = float(mutation_rate)
+        self._mutation_scale = float(mutation_scale)
+        self._elite_fraction = float(elite_fraction)
+        self._tournament_size = int(tournament_size)
+        self._seed = seed
+        self._polish = bool(polish)
+
+        if self._population_size < 4:
+            raise ValueError("population_size must be >= 4.")
+        if self._n_generations < 1:
+            raise ValueError("n_generations must be >= 1.")
+        if not (0.0 <= self._crossover_rate <= 1.0):
+            raise ValueError("crossover_rate must be in [0, 1].")
+        if not (0.0 <= self._mutation_rate <= 1.0):
+            raise ValueError("mutation_rate must be in [0, 1].")
+        if self._mutation_scale < 0.0:
+            raise ValueError("mutation_scale must be >= 0.")
+        if not (0.0 < self._elite_fraction < 1.0):
+            raise ValueError("elite_fraction must be in (0, 1).")
+        if self._tournament_size < 2:
+            raise ValueError("tournament_size must be >= 2.")
+
+    def calibrate(
+        self,
+        experiments: Sequence[Experiment],
+        *,
+        theta0: np.ndarray,
+        bounds: Optional[Tuple[np.ndarray, np.ndarray]] = None,
+        weights: Optional[Sequence[float]] = None,
+        max_nfev: Optional[int] = None,
+    ) -> CalibrationReport:
+        if len(experiments) == 0:
+            raise ValueError("Need at least one experiment.")
+
+        theta0 = np.asarray(theta0, dtype=float)
+        if theta0.ndim != 1:
+            raise ValueError("theta0 must be a 1D array.")
+
+        if bounds is None:
+            raise ValueError("GeneticAlgorithmCalibrator requires explicit bounds.")
+
+        lb = np.asarray(bounds[0], dtype=float)
+        ub = np.asarray(bounds[1], dtype=float)
+        if lb.shape != theta0.shape or ub.shape != theta0.shape:
+            raise ValueError("bounds must have the same shape as theta0.")
+        if np.any(~np.isfinite(lb)) or np.any(~np.isfinite(ub)):
+            raise ValueError("GeneticAlgorithmCalibrator requires finite bounds.")
+        if np.any(lb >= ub):
+            raise ValueError("Each lower bound must be strictly smaller than the upper bound.")
+        if np.any(theta0 < lb) or np.any(theta0 > ub):
+            raise ValueError("theta0 must lie inside bounds.")
+
+        if weights is not None and len(weights) != len(experiments):
+            raise ValueError("weights must match number of experiments.")
+        w = np.ones(len(experiments), dtype=float) if weights is None else np.asarray(weights, dtype=float)
+        if np.any(w < 0):
+            raise ValueError("weights must be non-negative.")
+
+        rng = np.random.default_rng(self._seed)
+        dim = theta0.shape[0]
+        span = ub - lb
+        elite_count = max(1, int(round(self._elite_fraction * self._population_size)))
+        elite_count = min(elite_count, self._population_size - 1)
+
+        nfev = 0
+
+        def objective(theta: np.ndarray) -> float:
+            nonlocal nfev
+            total = 0.0
+            for i, exp in enumerate(experiments):
+                sim_out = self._sim.simulate(exp.t, exp.u, theta).y
+                err = exp.y - sim_out
+                total += float(w[i]) * float(np.dot(err, err))
+            nfev += 1
+            return total
+
+        def evaluate_population(pop: np.ndarray) -> np.ndarray:
+            vals = np.empty(pop.shape[0], dtype=float)
+            for i in range(pop.shape[0]):
+                if max_nfev is not None and nfev >= max_nfev:
+                    vals[i:] = np.inf
+                    break
+                vals[i] = objective(pop[i])
+            return vals
+
+        def tournament_select(pop: np.ndarray, fit: np.ndarray) -> np.ndarray:
+            k = min(self._tournament_size, pop.shape[0])
+            idx = rng.choice(pop.shape[0], size=k, replace=False)
+            best_local = idx[np.argmin(fit[idx])]
+            return pop[best_local].copy()
+
+        def crossover(p1: np.ndarray, p2: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+            if rng.random() >= self._crossover_rate:
+                return p1.copy(), p2.copy()
+            alpha = rng.random(dim)
+            c1 = alpha * p1 + (1.0 - alpha) * p2
+            c2 = alpha * p2 + (1.0 - alpha) * p1
+            return c1, c2
+
+        def mutate(child: np.ndarray) -> np.ndarray:
+            mask = rng.random(dim) < self._mutation_rate
+            if np.any(mask):
+                noise = rng.normal(loc=0.0, scale=self._mutation_scale, size=dim) * span
+                child = child.copy()
+                child[mask] += noise[mask]
+            return np.clip(child, lb, ub)
+
+        # Initial population: keep theta0 + random individuals inside bounds
+        population = rng.uniform(lb, ub, size=(self._population_size, dim))
+        population[0] = np.clip(theta0, lb, ub)
+        fitness = evaluate_population(population)
+
+        best_idx = int(np.argmin(fitness))
+        best_theta = population[best_idx].copy()
+        best_value = float(fitness[best_idx])
+        stopped_early = max_nfev is not None and nfev >= max_nfev
+
+        for _gen in range(self._n_generations):
+            if stopped_early:
+                break
+
+            order = np.argsort(fitness)
+            population = population[order]
+            fitness = fitness[order]
+
+            if float(fitness[0]) < best_value:
+                best_value = float(fitness[0])
+                best_theta = population[0].copy()
+
+            new_population = [population[i].copy() for i in range(elite_count)]
+
+            while len(new_population) < self._population_size:
+                parent1 = tournament_select(population, fitness)
+                parent2 = tournament_select(population, fitness)
+                child1, child2 = crossover(parent1, parent2)
+                child1 = mutate(child1)
+                child2 = mutate(child2)
+                new_population.append(child1)
+                if len(new_population) < self._population_size:
+                    new_population.append(child2)
+
+            population = np.asarray(new_population, dtype=float)
+            fitness = evaluate_population(population)
+            stopped_early = max_nfev is not None and nfev >= max_nfev
+
+        # Optional local refinement from the best GA solution
+        if self._polish and not stopped_early:
+            def residuals(theta: np.ndarray) -> np.ndarray:
+                res_parts: List[np.ndarray] = []
+                for i, exp in enumerate(experiments):
+                    sim_out = self._sim.simulate(exp.t, exp.u, theta).y
+                    res_parts.append(np.sqrt(w[i]) * (exp.y - sim_out))
+                return np.concatenate(res_parts, axis=0)
+
+            remaining_nfev = None if max_nfev is None else max(1, max_nfev - nfev)
+            result = least_squares(
+                residuals,
+                x0=best_theta,
+                bounds=(lb, ub),
+                method="trf",
+                loss="linear",
+                max_nfev=remaining_nfev,
+            )
+            nfev += int(result.nfev)
+            polished_value = float(2.0 * result.cost)
+            if polished_value < best_value:
+                best_value = polished_value
+                best_theta = result.x.astype(float)
+                ga_success = bool(result.success)
+                ga_message = f"GA + polish: {result.message}"
+            else:
+                ga_success = True
+                ga_message = "GA finished; local polish did not improve the objective."
+        else:
+            ga_success = not stopped_early
+            ga_message = (
+                "GA stopped because max_nfev was reached."
+                if stopped_early
+                else "GA finished successfully."
+            )
+
+        per_metrics: List[tuple[str, MetricsResult]] = []
+        for exp in experiments:
+            yhat = self._sim.simulate(exp.t, exp.u, best_theta).y
+            per_metrics.append((exp.name, Metrics.compute(exp.y, yhat)))
+
+        return CalibrationReport(
+            theta_hat=np.asarray(best_theta, dtype=float),
+            cost=0.5 * float(best_value),
+            success=bool(ga_success),
+            message=ga_message,
+            nfev=int(nfev),
+            per_experiment_metrics=per_metrics,
+        )
 
 
 

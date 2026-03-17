@@ -7,6 +7,7 @@ from dtcalib.data import ExperimentsDataset
 from dtcalib.simulation import ExampleRCCircuitSimulator, LowPassR1CR2Simulator
 from dtcalib.calibration import LeastSquaresCalibrator, BayesianMAPCalibrator, RCNeuralCalibrator
 from dtcalib.validation import LeaveOneExperimentOutCV
+from dtcalib.calibration import GeneticAlgorithmCalibrator
 
 
 def main() -> None:
@@ -37,27 +38,39 @@ def main() -> None:
     #    sigma_y=1.0,
     #)
 
-    #cv = LeaveOneExperimentOutCV(simulator, calibrator)
+    calibrator = GeneticAlgorithmCalibrator(
+        simulator=simulator,
+        population_size=80,
+        n_generations=120,
+        crossover_rate=0.9,
+        mutation_rate=0.2,
+        mutation_scale=0.1,
+        elite_fraction=0.1,
+        seed=42,
+        polish=True,
+    )
 
-    #theta0 = np.array([3e-6])  # initial guess de C
-    #bounds = (np.array([1e-9]), np.array([1e-2]))  # C entre 1 nF et 10 mF (à adapter)
+    cv = LeaveOneExperimentOutCV(simulator, calibrator)
 
-    #cv_result = cv.run(ds, theta0=theta0, bounds=bounds, max_nfev=200)
-
-    #print("CV summary:", cv_result.summary())
-    #for fold in cv_result.folds[:5]:
-    #    print(
-    #        f"[held-out={fold.held_out}] "
-    #        f"theta_hat={fold.theta_hat} "
-    #        f"rmse={fold.test_metrics.rmse:.6g} nmse={fold.test_metrics.nmse:.6g}"
-    #    )
+    theta0 = np.array([3e-6])  # initial guess de C
+    bounds = (np.array([1e-9]), np.array([1e-2]))  # C entre 1 nF et 10 mF (à adapter)
+    
+    cv_result = cv.run(ds, theta0=theta0, bounds=bounds, max_nfev=5000)
+    
+    print("CV summary:", cv_result.summary())
+    for fold in cv_result.folds[:5]:
+        print(
+            f"[held-out={fold.held_out}] "
+            f"theta_hat={fold.theta_hat} "
+            f"rmse={fold.test_metrics.rmse:.6g} nmse={fold.test_metrics.nmse:.6g}"
+        )
 
     # Version to use NN, but maybe, no  needs LeaveOneExperimentOutCV
     # Mayby add argument to run with good simulation and calibrator by using arg in commadn line
-    calibrator = RCNeuralCalibrator.load("./src/dtcalib/deep_learning/models/rc_inverse_best_2026-03-09_10-11-18.pth")
-    report = calibrator.calibrate(ds.experiments)
-    print("NN Global C_hat:", report.theta_hat)
-    print("Variance:", report.cost)
+    #calibrator = RCNeuralCalibrator.load("./src/dtcalib/deep_learning/models/rc_inverse_best_2026-03-09_10-11-18.pth")
+    #report = calibrator.calibrate(ds.experiments)
+    #print("NN Global C_hat:", report.theta_hat)
+    #print("Variance:", report.cost)
 
 
 if __name__ == "__main__":
