@@ -63,6 +63,82 @@ CV summary: {'rmse_mean': 0.12766139677630703, 'rmse_std': 0.05392638873152219, 
 
 
 
+Dataset utilisé : dataset_+c_1p0032em06
+    # ---------- Chose the simulator ---------- #
+    simulator = LowPassR1CR2Simulator(R1=10_000.0, R2=10_000.0, use_C=True, y0_mode="dc_from_u0")
+
+    # ---------- Chose the calibrator ---------- #
+    calibrator = ParticleSwarmCalibrator(
+        simulator,
+        swarm_size=40,
+        n_iterations=100,
+        inertia=0.7,
+        cognitive=1.5,
+        social=1.5,
+        seed=42,
+        polish=True,
+    )
+
+    cv = LeaveOneExperimentOutCV(simulator, calibrator)
+
+    theta0 = np.array([3e-6])  # initial guess de C
+    bounds = (np.array([1e-9]), np.array([1e-2]))  # C entre 1 nF et 10 mF (à adapter)
+    
+    cv_result = cv.run(ds, theta0=theta0, bounds=bounds, max_nfev=5000)
+
+y stats: min= -2.49931903 max= 2.49931901 std= 1.7653209200855435
+u stats: min= -5.0 max= 5.0 std= 3.531122757068164
+CV summary: {'rmse_mean': 0.139453912621046, 'rmse_std': 0.06078776120611138, 'nmse_mean': 0.008291523701617204, 'nmse_std': 0.005692897796285108}
+[held-out=dataset_+c_1p0032em06__exp_lp_002_f0p523808hz__results_lp_002_f0p523808hz] theta_hat=[8.5368145e-07] rmse=0.247972 nmse=0.0197315
+[held-out=dataset_+c_1p0032em06__exp_lp_003_f0p548749hz__results_lp_003_f0p548749hz] theta_hat=[8.53681702e-07] rmse=0.246589 nmse=0.0195125
+[held-out=dataset_+c_1p0032em06__exp_lp_004_f0p574878hz__results_lp_004_f0p574878hz] theta_hat=[8.53682081e-07] rmse=0.245142 nmse=0.0192846
+[held-out=dataset_+c_1p0032em06__exp_lp_005_f0p602252hz__results_lp_005_f0p602252hz] theta_hat=[8.53682621e-07] rmse=0.243627 nmse=0.0190477
+[held-out=dataset_+c_1p0032em06__exp_lp_006_f0p630928hz__results_lp_006_f0p630928hz] theta_hat=[8.53683389e-07] rmse=0.242043 nmse=0.0188014
+
+
+
+
+
+Dataset utilisé : dataset_+c_1p0032em06
+    # ---------- Chose the simulator ---------- #
+    simulator = LowPassR1CR2Simulator(R1=10_000.0, R2=10_000.0, use_C=True, y0_mode="dc_from_u0")
+
+    # ---------- Chose the calibrator ---------- #
+    calibrator = ParticleSwarmCalibrator(
+        simulator,
+        swarm_size=40,
+        n_iterations=100,
+        inertia=0.7,
+        cognitive=1.5,
+        social=1.5,
+        seed=42,
+        polish=True,
+    )
+
+    cv = LeaveOneExperimentOutCV(simulator, calibrator)
+
+    theta0 = np.array([3e-6])  # initial guess de C
+    bounds = (np.array([1e-9]), np.array([1e-2]))  # C entre 1 nF et 10 mF (à adapter)
+    
+    cv_result = cv.run(ds, theta0=theta0, bounds=bounds, max_nfev=5000)
+
+y stats: min= -2.49931903 max= 2.49931901 std= 1.7653209200855435
+u stats: min= -5.0 max= 5.0 std= 3.531122757068164
+CV folds: 100%|███████████████████████████████████████| 99/99 [3:09:34<00:00, 114.90s/it]
+CV summary: {'rmse_mean': 0.38435089254778043, 'rmse_std': 0.3675819411832255, 'nmse_mean': 0.1916809336489283, 'nmse_std': 0.40361793511547595}
+[held-out=dataset_+c_1p0032em06__exp_lp_002_f0p523808hz__results_lp_002_f0p523808hz] theta_hat=[1.e-09] rmse=0.247969 nmse=0.0197309
+[held-out=dataset_+c_1p0032em06__exp_lp_003_f0p548749hz__results_lp_003_f0p548749hz] theta_hat=[1.e-09] rmse=0.246583 nmse=0.0195115
+[held-out=dataset_+c_1p0032em06__exp_lp_004_f0p574878hz__results_lp_004_f0p574878hz] theta_hat=[1.e-09] rmse=0.245131 nmse=0.019283
+[held-out=dataset_+c_1p0032em06__exp_lp_005_f0p602252hz__results_lp_005_f0p602252hz] theta_hat=[1.e-09] rmse=0.243611 nmse=0.0190451
+[held-out=dataset_+c_1p0032em06__exp_lp_006_f0p630928hz__results_lp_006_f0p630928hz] theta_hat=[1.e-09] rmse=0.242018 nmse=0.0187975
+
+
+
+
+
+
+
+
 
 
 Premier résultat du train avec la best config mais sans la colonne de temps : 
@@ -88,7 +164,7 @@ n_train=3200 | n_val=799 | n_test=1000
 
 
 
-
+Inverse Neural Network
 Résultat obtenue avec l'ajout de la colonne temporelle 
 n_train=3200 | n_val=799 | n_test=1000
 
