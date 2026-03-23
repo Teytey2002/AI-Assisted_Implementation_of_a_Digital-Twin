@@ -72,7 +72,7 @@ def run_inference(
         vin  = df.iloc[:, 1].values.astype(np.float32)
         vout = df.iloc[:, 2].values.astype(np.float32)
 
-        pred_C = calibrator.predict(time, vin, vout)
+        pred_C, pred_logC_std = calibrator.predict_distribution(time, vin, vout)
  
         rows.append(
             {
@@ -82,6 +82,7 @@ def run_inference(
                 "pred_C": float(pred_C),
                 "abs_error_C": float(abs(pred_C - true_C)),
                 "rel_error_percent": float(abs(pred_C - true_C) / max(abs(true_C), 1e-30) * 100.0),
+                "pred_logC_std": None if pred_logC_std is None else float(pred_logC_std),
             }
         )
 
@@ -134,7 +135,7 @@ def run_inference(
 
     print("\n[2] Capacity-level aggregated metrics")
     print(f"- Aggregation     = {aggregate}")
-    print(f"- #capacities     = {len(df_grouped)}")
+    print(f"- #Capacities     = {len(df_grouped)}")
     print(f"- RMSE(C)         = {rmse_C_group:.6e} F")
     print(f"- MAE(C)          = {mae_C_group:.6e} F")
     print(f"- MAPE(C)         = {mape_C_group:.3f} %")

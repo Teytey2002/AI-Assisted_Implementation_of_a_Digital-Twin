@@ -13,7 +13,7 @@ from .metrics import Metrics, MetricsResult
 from pathlib import Path
 import torch
 
-from dtcalib.deep_learning.model import RCInverseCNN
+from dtcalib.deep_learning.model import RCInverseCNN, ProbabilisticRCInverseCNN
 
 
 @dataclass(frozen=True)
@@ -760,7 +760,15 @@ class RCNeuralCalibrator:
         checkpoint_path = Path(checkpoint_path)
         ckpt = torch.load(checkpoint_path, map_location="cpu")
 
-        model = RCInverseCNN()
+        model_class = ckpt.get("model_class", "RCInverseCNN")
+
+        if model_class == "RCInverseCNN":
+            model = RCInverseCNN()
+        elif model_class == "ProbabilisticRCInverseCNN":
+            model = ProbabilisticRCInverseCNN()
+        else:
+            raise ValueError(f"Unsupported model_class in checkpoint: {model_class}")
+
         model.load_state_dict(ckpt["model_state_dict"])
 
         stats = NormalizationStats(
@@ -828,6 +836,57 @@ class RCNeuralCalibrator:
 
         return float(y_log.item())
 
+    def predict_distribution(
+        self,
+        time: Union[np.ndarray, torch.Tensor],
+        vin: Union[np.ndarray, torch.Tensor],
+        vout: Union[np.ndarray, torch.Tensor],
+    ) -> tuple[float, Optional[float]]:
+        if isinstance(vin, np.ndarray):
+            vin_t = torch.tensor(vin, dtype=torch.float32)
+        else:
+            vin_t = vin.float()
+
+        if isinstance(vout, np.ndarray):
+            vout_t = torch.tensor(vout, dtype=torch.float32)
+        else:
+            vout_t = vout.float()
+
+        if isinstance(time, np.ndarray):
+            time_t = torch.tensor(time, dtype=torch.float32)
+        else:
+            time_t = time.float()
+
+        if vin_t.ndim != 1 or vout_t.ndim != 1 or time_t.ndim != 1:
+            raise ValueError("vin, vout and time must be 1D arrays (shape [T]).")
+        if not (vin_t.shape[0] == vout_t.shape[0] == time_t.shape[0]):
+            raise ValueError("vin, vout and time must have the same length T.")
+
+        x = torch.stack([time_t, vin_t, vout_t], dim=0).to(self.device) # [3, T]
+        x = self._normalize_x(x)
+        x = x.unsqueeze(0)  # [1, 3, T]
+
+        with torch.no_grad():
+            out = self.model(x)
+
+            if isinstance(out, tuple):
+                mu_norm, log_var_norm = out
+                mu_norm = mu_norm.reshape(-1)
+                log_var_norm = log_var_norm.reshape(-1)
+
+                mu_log = self._denormalize_y(mu_norm)
+                std_log = self.stats.y_std * torch.sqrt(torch.exp(log_var_norm) + 1e-8)
+
+                mu_C = self._inverse_target_transform(mu_log)
+
+                return float(mu_C.item()), float(std_log.item())
+
+            y_norm = out.reshape(-1)    # [1]
+            y_log = self._denormalize_y(y_norm) # [1]
+            y_c = self._inverse_target_transform(y_log) # [1]
+
+            return float(y_c.item()), None
+        
     def predict(
         self,
         time: Union[np.ndarray, torch.Tensor],
@@ -838,36 +897,8 @@ class RCNeuralCalibrator:
         vin, vout: arrays of shape [T]
         returns: C_hat in Farads
         """
-        if isinstance(vin, np.ndarray):
-            vin_t = torch.tensor(vin, dtype=torch.float32)
-        else:
-            vin_t = vin.float()
-
-        if isinstance(vout, np.ndarray):
-            vout_t = torch.tensor(vout, dtype=torch.float32)
-        else:
-            vout_t = vout.float()
-        
-        if isinstance(time, np.ndarray):
-            time_t = torch.tensor(time, dtype=torch.float32)
-        else:
-            time_t = time.float()
-
-        if vin_t.ndim != 1 or vout_t.ndim != 1 or time_t.ndim != 1:
-            raise ValueError("vin and vout and time must be 1D arrays (shape [T]).")
-        if not (vin_t.shape[0] == vout_t.shape[0] == time_t.shape[0]):
-            raise ValueError("vin and vout and time must have the same length T.")
-
-        x = torch.stack([time_t, vin_t, vout_t], dim=0).to(self.device)  # [3, T]
-        x = self._normalize_x(x)
-        x = x.unsqueeze(0)  # [1, 3, T]
-
-        with torch.no_grad():
-            y_norm = self.model(x).reshape(-1)    # [1]
-            y_log = self._denormalize_y(y_norm)   # [1]
-            y_c = self._inverse_target_transform(y_log)  # [1]
-
-        return float(y_c.item())
+        pred_C, _ = self.predict_distribution(time, vin, vout)
+        return pred_C
 
     def calibrate(
         self,

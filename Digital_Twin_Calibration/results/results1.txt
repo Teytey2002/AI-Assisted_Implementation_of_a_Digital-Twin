@@ -68,13 +68,14 @@ Dataset utilisé : dataset_+c_1p0032em06
     simulator = LowPassR1CR2Simulator(R1=10_000.0, R2=10_000.0, use_C=True, y0_mode="dc_from_u0")
 
     # ---------- Chose the calibrator ---------- #
-    calibrator = ParticleSwarmCalibrator(
-        simulator,
-        swarm_size=40,
-        n_iterations=100,
-        inertia=0.7,
-        cognitive=1.5,
-        social=1.5,
+    calibrator = GeneticAlgorithmCalibrator(
+        simulator=simulator,
+        population_size=80,
+        n_generations=120,
+        crossover_rate=0.9,
+        mutation_rate=0.2,
+        mutation_scale=0.1,
+        elite_fraction=0.1,
         seed=42,
         polish=True,
     )
@@ -141,49 +142,72 @@ CV summary: {'rmse_mean': 0.38435089254778043, 'rmse_std': 0.3675819411832255, '
 
 
 
-Premier résultat du train avec la best config mais sans la colonne de temps : 
-On utilise le script inferance.py, crée pour ça
-n_train=3200 | n_val=799 | n_test=1000
-
-[1] Test metrics on individual samples
-- RMSE(C)         = 9.394120e-07 F
-- MAE(C)          = 7.473696e-07 F
-- MAPE(C)         = 32.063 %
-- RMSE(logC)      = 4.536467e-01
-- MAE(logC)       = 3.780696e-01
-
-[2] Global aggregated estimate on test set
-- Aggregate       = mean
-- Global C_hat    = 1.581717e-06 F
-
-[3] Predictions summary
-- true_C min/max/mean/std = 9.215620e-07 / 3.200000e-06 / 2.139709e-06 / 7.946141e-07
-- pred_C min/max/mean/std = 1.325554e-06 / 2.344318e-06 / 1.581717e-06 / 2.213095e-07
-
-[4] CSV saved: src/dtcalib/deep_learning/models/rc_inverse_best_2026-03-09_13-30-50_test_predictions.csv
-
-
 
 Inverse Neural Network
-Résultat obtenue avec l'ajout de la colonne temporelle 
+(torch_gpu) xxxx@TeyteyCase:/mnt/c/Users/theod/OneDrive/Documents/ULB/Ma2/TFE/AI-Assisted_Implementation_of_a_Digital-Twin/Digital_Twin_Calibration$ python3 inference.py --checkpoint ./src/dtcalib/deep_learning/models/cnn_2026-03-23_13-00-46_best.pth --root-dir ./data/ALL_LP_DATASETS_CSV_Deep_learning --split-j
+son ./src/dtcalib/deep_learning/splits/rc_nested_fold0.json
+Checkpoint : src/dtcalib/deep_learning/models/cnn_2026-03-23_13-00-46_best.pth
+Root dir   : data/ALL_LP_DATASETS_CSV_Deep_learning
+Split JSON : src/dtcalib/deep_learning/splits/rc_nested_fold0.json
+Device     : cuda
+Aggregate  : mean
 n_train=3200 | n_val=799 | n_test=1000
 
 [1] Sample-level metrics
-- RMSE(C)         = 8.505768e-08 F
-- MAE(C)          = 5.220808e-08 F
-- MAPE(C)         = 2.106 %
+- RMSE(C)         = 6.368234e-08 F
+- MAE(C)          = 4.137235e-08 F
+- MAPE(C)         = 1.802 %
 
 [2] Capacity-level aggregated metrics
 - Aggregation     = mean
-- #capacities     = 10
-- RMSE(C)         = 3.582215e-08 F
-- MAE(C)          = 2.643013e-08 F
-- MAPE(C)         = 0.993 %
+- #Capacities     = 10
+- RMSE(C)         = 3.581192e-08 F
+- MAE(C)          = 3.016825e-08 F
+- MAPE(C)         = 1.304 %
 
 [3] Sample-level prediction summary
 - true_C min/max/mean/std = 9.215620e-07 / 3.200000e-06 / 2.139709e-06 / 7.946141e-07
-- pred_C min/max/mean/std = 9.059750e-07 / 3.360867e-06 / 2.116401e-06 / 7.718410e-07
+- pred_C min/max/mean/std = 9.151284e-07 / 3.304694e-06 / 2.121080e-06 / 7.674991e-07
 
 [4] Aggregated prediction summary by true capacity
 - true_C min/max/mean/std = 9.215620e-07 / 3.200000e-06 / 2.139709e-06 / 7.946141e-07
-- pred_C min/max/mean/std = 9.279517e-07 / 3.140116e-06 / 2.116401e-06 / 7.679759e-07
+- pred_C min/max/mean/std = 9.345249e-07 / 3.157557e-06 / 2.121080e-06 / 7.656905e-07
+
+[5] CSV saved (sample-level)   : src/dtcalib/deep_learning/models/cnn_2026-03-23_13-00-46_best_test_predictions_per_sample.csv
+[5] CSV saved (capacity-level) : src/dtcalib/deep_learning/models/cnn_2026-03-23_13-00-46_best_test_predictions_per_capacity_mean.csv
+
+
+
+
+
+Probabilistic Inverse Neural Network
+(torch_gpu) xxxx@TeyteyCase:/mnt/c/Users/theod/OneDrive/Documents/ULB/Ma2/TFE/AI-Assisted_Implementation_of_a_Digital-Twin/Digital_Twin_Calibration$ python3 inference.py --checkpoint ./src/dtcalib/deep_learning/models/prob_cnn_2026-03-23_11-33-12_best.pth --root-dir ./data/ALL_LP_DATASETS_CSV_Deep_learning --split-json ./src/dtcalib/deep_learning/splits/rc_nested_fold0.json
+Checkpoint : src/dtcalib/deep_learning/models/prob_cnn_2026-03-23_11-33-12_best.pth
+Root dir   : data/ALL_LP_DATASETS_CSV_Deep_learning
+Split JSON : src/dtcalib/deep_learning/splits/rc_nested_fold0.json
+Device     : cuda
+Aggregate  : mean
+n_train=3200 | n_val=799 | n_test=1000
+
+[1] Sample-level metrics
+- RMSE(C)         = 1.091763e-07 F
+- MAE(C)          = 7.900332e-08 F
+- MAPE(C)         = 3.111 %
+
+[2] Capacity-level aggregated metrics
+- Aggregation     = mean
+- #Capacities     = 10
+- RMSE(C)         = 1.014968e-07 F
+- MAE(C)          = 7.575580e-08 F
+- MAPE(C)         = 2.884 %
+
+[3] Sample-level prediction summary
+- true_C min/max/mean/std = 9.215620e-07 / 3.200000e-06 / 2.139709e-06 / 7.946141e-07
+- pred_C min/max/mean/std = 9.056096e-07 / 3.066777e-06 / 2.072405e-06 / 7.226136e-07
+
+[4] Aggregated prediction summary by true capacity
+- true_C min/max/mean/std = 9.215620e-07 / 3.200000e-06 / 2.139709e-06 / 7.946141e-07
+- pred_C min/max/mean/std = 9.350063e-07 / 2.992588e-06 / 2.072405e-06 / 7.214932e-07
+
+[5] CSV saved (sample-level)   : src/dtcalib/deep_learning/models/prob_cnn_2026-03-23_11-33-12_best_test_predictions_per_sample.csv
+[5] CSV saved (capacity-level) : src/dtcalib/deep_learning/models/prob_cnn_2026-03-23_11-33-12_best_test_predictions_per_capacity_mean.csv
