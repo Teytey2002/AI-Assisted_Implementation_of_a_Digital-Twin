@@ -1,4 +1,4 @@
-Dataset Used : LP_Dataset_csv_C_Modified
+Dataset Used : dataset_+c_1p0032em06
 Parameters used : 
     simulator = LowPassR1CR2Simulator(R1=10_000.0, R2=10_000.0, use_C=True, y0_mode="dc_from_u0")
 
@@ -13,24 +13,23 @@ Parameters used :
     theta0 = np.array([3e-6])  # initial guess de C
     bounds = (np.array([1e-9]), np.array([1e-2]))  # C entre 1 nF et 10 mF (à adapter)
 
-y stats: min= -2.49861516 max= 2.49861393 std= 1.7650717940862473
+    cv_result = cv.run(ds, theta0=theta0, bounds=bounds, max_nfev=5000)
+
+y stats: min= -2.49931903 max= 2.49931901 std= 1.7653209200855435
 u stats: min= -5.0 max= 5.0 std= 3.531122757068164
-CV folds: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 100/100 [02:37<00:00,  1.58s/it]
-CV summary: {'rmse_mean': 0.12766043804837987, 'rmse_std': 0.053928352511705725, 'nmse_mean': 0.007760990184715699, 'nmse_std': 0.004938808327379208}
-[held-out=exp_lp_001_f0p5hz__results_lp_001_f0p5hz] theta_hat=[1.30517054e-06] rmse=0.235663 nmse=0.0178261
-[held-out=exp_lp_002_f0p523808hz__results_lp_002_f0p523808hz] theta_hat=[1.30517464e-06] rmse=0.233738 nmse=0.0175371
-[held-out=exp_lp_003_f0p548749hz__results_lp_003_f0p548749hz] theta_hat=[1.3051798e-06] rmse=0.231738 nmse=0.0172393
-[held-out=exp_lp_004_f0p574878hz__results_lp_004_f0p574878hz] theta_hat=[1.30518617e-06] rmse=0.229662 nmse=0.0169329
-[held-out=exp_lp_005_f0p602252hz__results_lp_005_f0p602252hz] theta_hat=[1.30519392e-06] rmse=0.227511 nmse=0.0166184
+CV folds: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 99/99 [01:10<00:00,  1.40it/s]
+CV summary: {'rmse_mean': 0.13945456261562303, 'rmse_std': 0.060788138051924345, 'nmse_mean': 0.008290599181134402, 'nmse_std': 0.005692059406025023}
+[held-out=dataset_+c_1p0032em06__exp_lp_002_f0p523808hz__results_lp_002_f0p523808hz] theta_hat=[8.53784237e-07] rmse=0.247972 nmse=0.0197315
+[held-out=dataset_+c_1p0032em06__exp_lp_003_f0p548749hz__results_lp_003_f0p548749hz] theta_hat=[8.5378451e-07] rmse=0.246589 nmse=0.0195125
+[held-out=dataset_+c_1p0032em06__exp_lp_004_f0p574878hz__results_lp_004_f0p574878hz] theta_hat=[8.53784913e-07] rmse=0.245142 nmse=0.0192846
+[held-out=dataset_+c_1p0032em06__exp_lp_005_f0p602252hz__results_lp_005_f0p602252hz] theta_hat=[8.53785491e-07] rmse=0.243627 nmse=0.0190477
+[held-out=dataset_+c_1p0032em06__exp_lp_006_f0p630928hz__results_lp_006_f0p630928hz] theta_hat=[8.53786306e-07] rmse=0.242043 nmse=0.0188014
 
 
 
 
 
-
-
-
-Dataset Used : LP_Dataset_csv_C_Modified
+Dataset Used : dataset_+c_1p0032em06
 Parameters used : 
     # ---------- Chose the simulator ---------- #
     simulator = LowPassR1CR2Simulator(R1=10_000.0, R2=10_000.0, use_C=True, y0_mode="dc_from_u0")
@@ -48,16 +47,50 @@ Parameters used :
     theta0 = np.array([3e-6])  # initial guess de C
     bounds = (np.array([1e-9]), np.array([1e-2]))  # C entre 1 nF et 10 mF (à adapter)
 
-y stats: min= -2.49861516 max= 2.49861393 std= 1.7650717940862473
-u stats: min= -5.0 max= 5.0 std= 3.531122757068164
-CV folds: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 100/100 [02:42<00:00,  1.63s/it]
-CV summary: {'rmse_mean': 0.12766139677630703, 'rmse_std': 0.05392638873152219, 'nmse_mean': 0.00776181509258681, 'nmse_std': 0.004939749852647397}
-[held-out=exp_lp_001_f0p5hz__results_lp_001_f0p5hz] theta_hat=[1.30511158e-06] rmse=0.235663 nmse=0.0178261
-[held-out=exp_lp_002_f0p523808hz__results_lp_002_f0p523808hz] theta_hat=[1.30511569e-06] rmse=0.233738 nmse=0.0175371
-[held-out=exp_lp_003_f0p548749hz__results_lp_003_f0p548749hz] theta_hat=[1.30512085e-06] rmse=0.231738 nmse=0.0172393
-[held-out=exp_lp_004_f0p574878hz__results_lp_004_f0p574878hz] theta_hat=[1.30512722e-06] rmse=0.229662 nmse=0.0169329
-[held-out=exp_lp_005_f0p602252hz__results_lp_005_f0p602252hz] theta_hat=[1.30513496e-06] rmse=0.227511 nmse=0.0166184
+    cv_result = cv.run(ds, theta0=theta0, bounds=bounds, max_nfev=5000)
 
+y stats: min= -2.49931903 max= 2.49931901 std= 1.7653209200855435
+u stats: min= -5.0 max= 5.0 std= 3.531122757068164
+CV folds: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 99/99 [01:13<00:00,  1.35it/s]
+CV summary: {'rmse_mean': 0.13945469726520712, 'rmse_std': 0.06078794913331081, 'nmse_mean': 0.008290751717402458, 'nmse_std': 0.005692166376293287}
+[held-out=dataset_+c_1p0032em06__exp_lp_002_f0p523808hz__results_lp_002_f0p523808hz] theta_hat=[8.53770194e-07] rmse=0.247972 nmse=0.0197315
+[held-out=dataset_+c_1p0032em06__exp_lp_003_f0p548749hz__results_lp_003_f0p548749hz] theta_hat=[8.53770468e-07] rmse=0.246589 nmse=0.0195125
+[held-out=dataset_+c_1p0032em06__exp_lp_004_f0p574878hz__results_lp_004_f0p574878hz] theta_hat=[8.5377087e-07] rmse=0.245142 nmse=0.0192846
+[held-out=dataset_+c_1p0032em06__exp_lp_005_f0p602252hz__results_lp_005_f0p602252hz] theta_hat=[8.53771449e-07] rmse=0.243627 nmse=0.0190477
+[held-out=dataset_+c_1p0032em06__exp_lp_006_f0p630928hz__results_lp_006_f0p630928hz] theta_hat=[8.53772263e-07] rmse=0.242043 nmse=0.0188014
+
+
+
+
+Dataset Used : dataset_+c_1p0032em06
+Parameters used : 
+    # ---------- Chose the simulator ---------- #
+    simulator = LowPassR1CR2Simulator(R1=10_000.0, R2=10_000.0, use_C=True, y0_mode="dc_from_u0")
+
+    # ---------- Chose the calibrator ---------- #
+    calibrator = BayesianMAPCalibrator(
+        simulator=simulator,
+        prior_mean=np.array([5e-7]),
+        prior_std=np.array([1e-8]),   # très fort               ### ATTENTION ON CHANGE CETTE VALEUR 
+        sigma_y=1.0,
+    )
+
+    cv = LeaveOneExperimentOutCV(simulator, calibrator)
+
+    theta0 = np.array([3e-6])  # initial guess de C
+    bounds = (np.array([1e-9]), np.array([1e-2]))  # C entre 1 nF et 10 mF (à adapter)
+
+    cv_result = cv.run(ds, theta0=theta0, bounds=bounds, max_nfev=5000)
+
+y stats: min= -2.49931903 max= 2.49931901 std= 1.7653209200855435
+u stats: min= -5.0 max= 5.0 std= 3.531122757068164
+CV folds: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 99/99 [01:56<00:00,  1.18s/it]
+CV summary: {'rmse_mean': 0.16029941355682886, 'rmse_std': 0.07161374090067182, 'nmse_mean': 0.014563338090955412, 'nmse_std': 0.016531557813036113}
+[held-out=dataset_+c_1p0032em06__exp_lp_002_f0p523808hz__results_lp_002_f0p523808hz] theta_hat=[7.01217773e-07] rmse=0.247969 nmse=0.0197309
+[held-out=dataset_+c_1p0032em06__exp_lp_003_f0p548749hz__results_lp_003_f0p548749hz] theta_hat=[7.01217857e-07] rmse=0.246584 nmse=0.0195116
+[held-out=dataset_+c_1p0032em06__exp_lp_004_f0p574878hz__results_lp_004_f0p574878hz] theta_hat=[7.01217969e-07] rmse=0.245133 nmse=0.0192832
+[held-out=dataset_+c_1p0032em06__exp_lp_005_f0p602252hz__results_lp_005_f0p602252hz] theta_hat=[7.01218122e-07] rmse=0.243613 nmse=0.0190454
+[held-out=dataset_+c_1p0032em06__exp_lp_006_f0p630928hz__results_lp_006_f0p630928hz] theta_hat=[7.01218331e-07] rmse=0.242021 nmse=0.018798
 
 
 

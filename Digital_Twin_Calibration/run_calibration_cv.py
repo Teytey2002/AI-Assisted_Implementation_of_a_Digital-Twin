@@ -31,12 +31,13 @@ def main() -> None:
     #    loss="linear",
     #)
 
-    #calibrator = BayesianMAPCalibrator(
-    #    simulator=simulator,
-    #    prior_mean=np.array([5e-7]),
-    #    prior_std=np.array([1.5e-6]),  # prior "large" => proche LS
-    #    sigma_y=1.0,
-    #)
+    calibrator = BayesianMAPCalibrator(
+        simulator=simulator,
+        prior_mean=np.array([5e-7]),
+        #prior_std=np.array([1.5e-6]),  # prior "large" => proche LS
+        prior_std=np.array([1e-8]),   # très fort
+        sigma_y=1.0,
+    )
 
     #calibrator = GeneticAlgorithmCalibrator(
     #    simulator=simulator,
@@ -50,16 +51,16 @@ def main() -> None:
     #    polish=True,
     #)
 
-    calibrator = ParticleSwarmCalibrator(
-        simulator,
-        swarm_size=40,
-        n_iterations=100,
-        inertia=0.7,
-        cognitive=1.5,
-        social=1.5,
-        seed=42,
-        polish=True,
-    )
+    #calibrator = ParticleSwarmCalibrator(
+    #    simulator,
+    #    swarm_size=40,
+    #    n_iterations=100,
+    #    inertia=0.7,
+    #    cognitive=1.5,
+    #    social=1.5,
+    #    seed=42,
+    #    polish=True,
+    #)
 
     cv = LeaveOneExperimentOutCV(simulator, calibrator)
 
