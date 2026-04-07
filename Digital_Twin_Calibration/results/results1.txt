@@ -170,11 +170,41 @@ CV summary: {'rmse_mean': 0.38435089254778043, 'rmse_std': 0.3675819411832255, '
 
 
 
+Irace comme calibrator : 
+Avec maxExperiments = 500 et borne du paramètre (-20, -2)
+[2] Meilleure configuration finale
+- ID de la meilleure configuration : 71
+   .ID.      logC .PARENT.
+71   71 -14.06045       61
 
+[3] Élites finales
+- IDs des élites finales : 71
+   .ID.      logC .PARENT.
+71   71 -14.06045       61
 
+ça veut dire : 
+C_irace = 7.86e-07
+C_true  = 1.00e-06
 
+→ erreur ≈ 21.8 %
 
+irace comme calibrator mais avec d'autres donnée initial
+-14.606 avec maxExperiments = 2000 et bound (-16, -12)
+[2] Meilleure configuration finale
+- ID de la meilleure configuration : 213
+    .ID.      logC .PARENT.
+213  213 -14.60661      189
 
+[3] Élites finales
+- IDs des élites finales : 213
+    .ID.      logC .PARENT.
+213  213 -14.60661      189
+
+ça veut dire : 
+C_irace = 4.53e-07
+C_true  = 1.00e-06
+
+→ erreur ≈ 54.7 %
 
 Inverse Neural Network
 (torch_gpu) xxxx@TeyteyCase:/mnt/c/Users/theod/OneDrive/Documents/ULB/Ma2/TFE/AI-Assisted_Implementation_of_a_Digital-Twin/Digital_Twin_Calibration$ python3 inference.py --checkpoint ./src/dtcalib/deep_learning/models/cnn_2026-03-23_13-00-46_best.pth --root-dir ./data/ALL_LP_DATASETS_CSV_Deep_learning --split-j
