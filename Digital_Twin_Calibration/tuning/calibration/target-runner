@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+set -eu
+
+TUNING_DIR="$(cd "$(dirname "$0")" && pwd)"
+ROOT_DIR="$(cd "${TUNING_DIR}/.." && pwd)"
+
+CONFIG_ID="$1"
+INSTANCE_ID="$2"
+SEED="$3"
+INSTANCE="$4" 
+shift 4
+
+# Le reste = paramètres
+PARAMS="$@"
+
+# Parse irace parameters
+ARGS=""
+for ARG in "$@"; do
+    if [[ $ARG == logC* ]]; then
+        VALUE=${ARG#logC}
+        ARGS="$ARGS --logC $VALUE"
+    fi
+done
+
+python3 calibration_runner.py \
+    --instance "$INSTANCE" \
+    $ARGS

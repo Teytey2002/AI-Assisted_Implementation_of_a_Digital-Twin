@@ -1,4 +1,4 @@
-# src/dtcalib/iterated_racing/train_api.py
+# tuning/CNN/train.py
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -11,7 +11,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, Subset
 
-from dtcalib.deep_learning.model import RCInverseCNN
+from dtcalib.deep_learning.model import RCInverseCNN, ProbabilisticRCInverseCNN
 from dtcalib.deep_learning.dataset import RCSignalDataset
 from dtcalib.deep_learning.splits_utils import load_split, get_indices
 
@@ -73,6 +73,7 @@ def run_training_job_fixed_epochs(
     sched_factor = float(params["scheduler_factor"])
     sched_patience = int(params["scheduler_patience"])
     target_transform = str(params["target_transform"])  # "C" or "logC"
+    model_type = str(params["model_type"])
 
     # --------- Dataset (full) ---------
     ds = RCSignalDataset(Path(root_dir))
@@ -98,7 +99,14 @@ def run_training_job_fixed_epochs(
     val_loader = DataLoader(val_ds, batch_size=batch_size, shuffle=False, drop_last=False)
 
     # --------- Model ---------
-    model = RCInverseCNN().to(device_t)
+    if model_type == "cnn":
+        model = RCInverseCNN()
+    elif model_type == "prob":
+        model = ProbabilisticRCInverseCNN()
+    else:
+        raise ValueError(f"Unknown model_type: {model_type}")
+
+    model = model.to(device_t)
     criterion = nn.MSELoss()
 
     if optimizer_name == "adam":

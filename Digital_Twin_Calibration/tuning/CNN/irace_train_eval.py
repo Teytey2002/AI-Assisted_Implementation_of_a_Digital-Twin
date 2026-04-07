@@ -1,4 +1,4 @@
-# irace_train_eval.py
+# tuning/CNN/irace_train_eval.py
 from __future__ import annotations
 
 import argparse
@@ -7,7 +7,7 @@ import math
 import sys
 import traceback
 
-from dtcalib.iterated_racing.train import run_training_job_fixed_epochs 
+from train import run_training_job_fixed_epochs 
 
 PENALTY = 1e100  # coût renvoyé en cas de crash/OOM (irace doit recevoir un nombre)
 
@@ -31,6 +31,7 @@ def main() -> int:
     p.add_argument("--scheduler", type=str, default="plateau")     # "none" / "plateau"
     p.add_argument("--scheduler_factor", type=float, default=0.5)
     p.add_argument("--scheduler_patience", type=int, default=5)
+    p.add_argument("--model_type", type=str, required=True)    # cnn or prob
 
     args = p.parse_args()
 
@@ -40,6 +41,7 @@ def main() -> int:
         "lr": args.lr,
         "weight_decay": args.weight_decay,
         "optimizer": args.optimizer,
+        "model_type": args.model_type
     }
 
     # Si scheduler désactivé: on met des valeurs neutres (ou on ignore)
@@ -51,6 +53,8 @@ def main() -> int:
         params["scheduler_patience"] = args.scheduler_patience
 
     params["target_transform"] = "logC"
+    #params["model_type"] = "cnn"
+    #params["model_type"] = "prob"      Depending on what we want to test
 
     try:
         out = run_training_job_fixed_epochs(
