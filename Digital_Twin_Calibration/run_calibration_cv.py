@@ -33,16 +33,16 @@ def main() -> None:
     # ------------------------------------------------------------------
 
     # --- Scenario 1: calibrate only C ---
-    #calibrated_params = ("C",)
-    #fixed_params = {
-    #    "R1": 10_000.0,
-    #    "R2": 10_000.0,
-    #}
-    #initialGuess = np.array([3e-6], dtype=float)      # Initial guess for C
-    #bounds = (np.array([1e-9], dtype=float), np.array([1e-2], dtype=float))     # Bounds for C
-    ## For BayesianMAPCalibrator
-    #prior_mean = np.array([1.0032e-6], dtype=float)
-    #prior_std  = np.array([5e-7], dtype=float)      # If prior_std too big, the prior is almost flat and we recover the LeastSquaresCalibrator results. 
+    calibrated_params = ("C",)
+    fixed_params = {
+        "R1": 10_000.0,
+        "R2": 10_000.0,
+    }
+    initialGuess = np.array([3e-6], dtype=float)      # Initial guess for C
+    bounds = (np.array([1e-9], dtype=float), np.array([1e-2], dtype=float))     # Bounds for C
+    # For BayesianMAPCalibrator
+    prior_mean = np.array([1.0032e-6], dtype=float)
+    prior_std  = np.array([5e-7], dtype=float)      # If prior_std too big, the prior is almost flat and we recover the LeastSquaresCalibrator results. 
                                                     # If too small, the prior dominates and we get theta_hat close to prior_mean. So we need to find a good balance.
 
 
@@ -61,16 +61,16 @@ def main() -> None:
     #prior_std  = np.array([1_000.0, 5e-7], dtype=float)
 
     # --- Scenario 3: calibrate R1, R2, C ---
-    calibrated_params = ("R1", "R2", "C")
-    fixed_params = {}
-    initialGuess = np.array([3_000.0, 15_000.0, 3e-6], dtype=float)
-    bounds = (
-        np.array([1e2, 1e2, 1e-9], dtype=float),
-        np.array([1e7, 1e7, 1e-2], dtype=float),
-    )
-    # for BayesianMAPCalibrator
-    prior_mean = np.array([10_000.0, 10_000.0, 1e-6], dtype=float)
-    prior_std  = np.array([1_000.0, 1_000.0, 5e-7], dtype=float)
+    #calibrated_params = ("R1", "R2", "C")
+    #fixed_params = {}
+    #initialGuess = np.array([3_000.0, 15_000.0, 3e-6], dtype=float)
+    #bounds = (
+    #    np.array([1e2, 1e2, 1e-9], dtype=float),
+    #    np.array([1e7, 1e7, 1e-2], dtype=float),
+    #)
+    ## for BayesianMAPCalibrator
+    #prior_mean = np.array([10_000.0, 10_000.0, 1e-6], dtype=float)
+    #prior_std  = np.array([1_000.0, 1_000.0, 5e-7], dtype=float)
 
     print("\nCalibration setup")
     print("calibrated_params =", calibrated_params)
@@ -111,10 +111,16 @@ def main() -> None:
         n_generations=120,
         crossover_rate=0.9,
         mutation_rate=0.2,
-        mutation_scale=0.1,
+        mutation_scale=0.15,
         elite_fraction=0.1,
+        init_near_theta0_fraction=0.5,
+        init_near_theta0_scale=0.25,
+        mutation_mode="log",
         seed=42,
         polish=True,
+        polish_method="trf",
+        polish_loss="linear",
+        polish_f_scale=1.0,
     )
 
     #calibrator = ParticleSwarmCalibrator(

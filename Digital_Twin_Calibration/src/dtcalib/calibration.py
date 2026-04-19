@@ -234,9 +234,10 @@ class GeneticAlgorithmCalibrator:
       theta_hat = argmin_theta sum_i w_i * || y_i - sim(t_i,u_i;theta) ||^2
 
     Notes:
-      - this optimizer is derivative-free
-      - bounds are required because the population is sampled inside them
-      - the returned ``cost`` follows the same convention as LeastSquaresCalibrator:
+      - derivative-free optimizer
+      - explicit finite bounds are required
+      - supports any number of parameters as long as theta0 and bounds match
+      - returned ``cost`` follows the same convention as LeastSquaresCalibrator:
         0.5 * sum(residuals**2)
     """
 
@@ -251,8 +252,14 @@ class GeneticAlgorithmCalibrator:
         mutation_scale: float = 0.1,
         elite_fraction: float = 0.1,
         tournament_size: int = 3,
+        init_near_theta0_fraction: float = 0.5,
+        init_near_theta0_scale: float = 0.2,
+        mutation_mode: str = "log",   # "log" or "relative"
         seed: Optional[int] = None,
         polish: bool = True,
+        polish_method: str = "trf",
+        polish_loss: str = "linear",
+        polish_f_scale: float = 1.0,
     ) -> None:
         self._sim = simulator
         self._population_size = int(population_size)
@@ -262,8 +269,16 @@ class GeneticAlgorithmCalibrator:
         self._mutation_scale = float(mutation_scale)
         self._elite_fraction = float(elite_fraction)
         self._tournament_size = int(tournament_size)
+
+        self._init_near_theta0_fraction = float(init_near_theta0_fraction)
+        self._init_near_theta0_scale = float(init_near_theta0_scale)
+        self._mutation_mode = str(mutation_mode)
+
         self._seed = seed
         self._polish = bool(polish)
+        self._polish_method = str(polish_method)
+        self._polish_loss = str(polish_loss)
+        self._polish_f_scale = float(polish_f_scale)
 
         if self._population_size < 4:
             raise ValueError("population_size must be >= 4.")
@@ -279,6 +294,12 @@ class GeneticAlgorithmCalibrator:
             raise ValueError("elite_fraction must be in (0, 1).")
         if self._tournament_size < 2:
             raise ValueError("tournament_size must be >= 2.")
+        if not (0.0 <= self._init_near_theta0_fraction <= 1.0):
+            raise ValueError("init_near_theta0_fraction must be in [0, 1].")
+        if self._init_near_theta0_scale < 0.0:
+            raise ValueError("init_near_theta0_scale must be >= 0.")
+        if self._mutation_mode not in {"log", "relative"}:
+            raise ValueError("mutation_mode must be either 'log' or 'relative'.")
 
     def calibrate(
         self,
@@ -301,6 +322,7 @@ class GeneticAlgorithmCalibrator:
 
         lb = np.asarray(bounds[0], dtype=float)
         ub = np.asarray(bounds[1], dtype=float)
+
         if lb.shape != theta0.shape or ub.shape != theta0.shape:
             raise ValueError("bounds must have the same shape as theta0.")
         if np.any(~np.isfinite(lb)) or np.any(~np.isfinite(ub)):
@@ -309,6 +331,11 @@ class GeneticAlgorithmCalibrator:
             raise ValueError("Each lower bound must be strictly smaller than the upper bound.")
         if np.any(theta0 < lb) or np.any(theta0 > ub):
             raise ValueError("theta0 must lie inside bounds.")
+        if np.any(lb <= 0.0):
+            raise ValueError(
+                "This GA implementation assumes strictly positive lower bounds "
+                "to support log-scale mutation."
+            )
 
         if weights is not None and len(weights) != len(experiments):
             raise ValueError("weights must match number of experiments.")
@@ -355,24 +382,73 @@ class GeneticAlgorithmCalibrator:
             alpha = rng.random(dim)
             c1 = alpha * p1 + (1.0 - alpha) * p2
             c2 = alpha * p2 + (1.0 - alpha) * p1
+            c1 = np.clip(c1, lb, ub)
+            c2 = np.clip(c2, lb, ub)
             return c1, c2
 
         def mutate(child: np.ndarray) -> np.ndarray:
             mask = rng.random(dim) < self._mutation_rate
-            if np.any(mask):
-                noise = rng.normal(loc=0.0, scale=self._mutation_scale, size=dim) * span
-                child = child.copy()
-                child[mask] += noise[mask]
+            if not np.any(mask):
+                return child
+
+            child = child.copy()
+
+            if self._mutation_mode == "log":
+                # multiplicative mutation: x <- x * exp(noise)
+                log_child = np.log(child)
+                noise = rng.normal(loc=0.0, scale=self._mutation_scale, size=dim)
+                log_child[mask] += noise[mask]
+                child = np.exp(log_child)
+            else:
+                # relative mutation: x <- x * (1 + noise)
+                noise = rng.normal(loc=0.0, scale=self._mutation_scale, size=dim)
+                child[mask] *= (1.0 + noise[mask])
+
             return np.clip(child, lb, ub)
 
-        # Initial population: keep theta0 + random individuals inside bounds
-        population = rng.uniform(lb, ub, size=(self._population_size, dim))
-        population[0] = np.clip(theta0, lb, ub)
+        def initialize_population() -> np.ndarray:
+            pop = np.empty((self._population_size, dim), dtype=float)
+
+            # Always keep theta0
+            pop[0] = np.clip(theta0, lb, ub)
+
+            n_local = int(round(self._init_near_theta0_fraction * (self._population_size - 1)))
+            n_local = max(0, min(n_local, self._population_size - 1))
+            n_global = (self._population_size - 1) - n_local
+
+            cursor = 1
+
+            # Local initialization around theta0
+            for _ in range(n_local):
+                candidate = theta0.copy()
+
+                if self._mutation_mode == "log":
+                    log_candidate = np.log(candidate)
+                    noise = rng.normal(loc=0.0, scale=self._init_near_theta0_scale, size=dim)
+                    log_candidate += noise
+                    candidate = np.exp(log_candidate)
+                else:
+                    noise = rng.normal(loc=0.0, scale=self._init_near_theta0_scale, size=dim)
+                    candidate = candidate * (1.0 + noise)
+
+                pop[cursor] = np.clip(candidate, lb, ub)
+                cursor += 1
+
+            # Global initialization over the full search box
+            for _ in range(n_global):
+                pop[cursor] = rng.uniform(lb, ub, size=dim)
+                cursor += 1
+
+            return pop
+
+        # Initial population
+        population = initialize_population()
         fitness = evaluate_population(population)
 
         best_idx = int(np.argmin(fitness))
         best_theta = population[best_idx].copy()
         best_value = float(fitness[best_idx])
+
         stopped_early = max_nfev is not None and nfev >= max_nfev
 
         for _gen in range(self._n_generations):
@@ -392,9 +468,11 @@ class GeneticAlgorithmCalibrator:
             while len(new_population) < self._population_size:
                 parent1 = tournament_select(population, fitness)
                 parent2 = tournament_select(population, fitness)
+
                 child1, child2 = crossover(parent1, parent2)
                 child1 = mutate(child1)
                 child2 = mutate(child2)
+
                 new_population.append(child1)
                 if len(new_population) < self._population_size:
                     new_population.append(child2)
@@ -403,7 +481,13 @@ class GeneticAlgorithmCalibrator:
             fitness = evaluate_population(population)
             stopped_early = max_nfev is not None and nfev >= max_nfev
 
-        # Optional local refinement from the best GA solution
+        # Keep best final individual
+        final_best_idx = int(np.argmin(fitness))
+        if float(fitness[final_best_idx]) < best_value:
+            best_value = float(fitness[final_best_idx])
+            best_theta = population[final_best_idx].copy()
+
+        # Optional local refinement
         if self._polish and not stopped_early:
             def residuals(theta: np.ndarray) -> np.ndarray:
                 res_parts: List[np.ndarray] = []
@@ -413,15 +497,18 @@ class GeneticAlgorithmCalibrator:
                 return np.concatenate(res_parts, axis=0)
 
             remaining_nfev = None if max_nfev is None else max(1, max_nfev - nfev)
+
             result = least_squares(
                 residuals,
                 x0=best_theta,
                 bounds=(lb, ub),
-                method="trf",
-                loss="linear",
+                method=self._polish_method,
+                loss=self._polish_loss,
+                f_scale=self._polish_f_scale,
                 max_nfev=remaining_nfev,
             )
             nfev += int(result.nfev)
+
             polished_value = float(2.0 * result.cost)
             if polished_value < best_value:
                 best_value = polished_value
@@ -584,7 +671,7 @@ class ParticleSwarmCalibrator:
             vmax = None
 
         pbest_positions = positions.copy()
-        pbest_costs = np.empty(self._swarm_size, dtype=float)
+        pbest_costs = np.full(self._swarm_size, np.inf, dtype=float)
 
         for i in range(self._swarm_size):
             if max_nfev is not None and nfev >= max_nfev:
