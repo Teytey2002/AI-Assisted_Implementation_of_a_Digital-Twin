@@ -88,7 +88,7 @@ class ExampleRCCircuitSimulator(Simulator):
 
 class LowPassR1CR2Simulator(Simulator):
     """
-    Simulator for the real circuit:
+    Simulator for the circuit:
         u -- R1 -- v
                  |-- C -- GND
                  |-- R2 -- GND
@@ -96,28 +96,128 @@ class LowPassR1CR2Simulator(Simulator):
     ODE:
         dv/dt = (1/(R1*C)) * u - ( (1/R1 + 1/R2)/C ) * v
 
-    Discretization:
-        Exact ZOH (u constant on each [t_{k-1}, t_k]):
-
+    Exact ZOH discretization:
         v_k = v_{k-1} * exp(-a*dt) + (b/a) * u_{k-1} * (1 - exp(-a*dt))
         where:
-          a = (1/R1 + 1/R2) / C
-          b = 1/(R1*C)
+            a = (1/R1 + 1/R2) / C
+            b = 1/(R1*C)
 
-    theta convention:
-      - theta = [C]  (Farads)  if use_C=True
-      - theta = [tau] (seconds) if use_C=False, with tau = C*(R1*R2)/(R1+R2)
+    New theta convention:
+      - calibrated_params defines which physical parameters are estimated
+      - theta follows exactly the same order as calibrated_params
+
+    Examples:
+      - calibrate only C:
+            LowPassR1CR2Simulator(
+                calibrated_params=("C",),
+                fixed_params={"R1": 10_000.0, "R2": 10_000.0},
+            )
+            theta = [C]
+
+      - calibrate R2 and C:
+            LowPassR1CR2Simulator(
+                calibrated_params=("R2", "C"),
+                fixed_params={"R1": 10_000.0},
+            )
+            theta = [R2, C]
+
+      - calibrate R1, R2, C:
+            LowPassR1CR2Simulator(
+                calibrated_params=("R1", "R2", "C"),
+                fixed_params={},
+            )
+            theta = [R1, R2, C]
     """
 
-    def __init__(self, *, R1: float, R2: float, use_C: bool = True, y0_mode: str = "dc_from_u0") -> None:
-        if R1 <= 0 or R2 <= 0:
-            raise ValueError("R1 and R2 must be > 0.")
+    _VALID_PARAM_NAMES = ("R1", "R2", "C")
+
+    def __init__(
+        self,
+        *,
+        calibrated_params: tuple[str, ...] = ("C",),
+        fixed_params: Optional[Dict[str, float]] = None,
+        y0_mode: str = "dc_from_u0",
+    ) -> None:
         if y0_mode not in {"zero", "u0", "dc_from_u0"}:
-            raise ValueError("y0_mode must be one of {'zero','u0','dc_from_u0'}.")
-        self._R1 = float(R1)
-        self._R2 = float(R2)
-        self._use_C = bool(use_C)
+            raise ValueError("y0_mode must be one of {'zero', 'u0', 'dc_from_u0'}.")
+
+        calibrated_params = tuple(calibrated_params)
+        if len(calibrated_params) == 0:
+            raise ValueError("calibrated_params cannot be empty.")
+
+        invalid = [p for p in calibrated_params if p not in self._VALID_PARAM_NAMES]
+        if invalid:
+            raise ValueError(
+                f"Unknown calibrated parameter(s): {invalid}. "
+                f"Valid names are {self._VALID_PARAM_NAMES}."
+            )
+
+        if len(set(calibrated_params)) != len(calibrated_params):
+            raise ValueError("calibrated_params must not contain duplicates.")
+
+        fixed_params = {} if fixed_params is None else dict(fixed_params)
+
+        invalid_fixed = [p for p in fixed_params if p not in self._VALID_PARAM_NAMES]
+        if invalid_fixed:
+            raise ValueError(
+                f"Unknown fixed parameter(s): {invalid_fixed}. "
+                f"Valid names are {self._VALID_PARAM_NAMES}."
+            )
+
+        overlap = set(calibrated_params).intersection(fixed_params.keys())
+        if overlap:
+            raise ValueError(
+                f"Parameters cannot be both fixed and calibrated: {sorted(overlap)}."
+            )
+
+        missing = set(self._VALID_PARAM_NAMES) - set(calibrated_params) - set(fixed_params.keys())
+        if missing:
+            raise ValueError(
+                f"Missing parameter definition for: {sorted(missing)}. "
+                "Each of R1, R2, C must be either fixed or calibrated."
+            )
+
+        for name, value in fixed_params.items():
+            value = float(value)
+            if value <= 0:
+                raise ValueError(f"Fixed parameter {name} must be > 0.")
+            fixed_params[name] = value
+
+        self._calibrated_params = calibrated_params
+        self._fixed_params = fixed_params
         self._y0_mode = y0_mode
+
+    @property
+    def calibrated_params(self) -> tuple[str, ...]:
+        return self._calibrated_params
+
+    @property
+    def n_parameters(self) -> int:
+        return len(self._calibrated_params)
+
+    def _decode_theta(self, theta: np.ndarray) -> tuple[float, float, float]:
+        theta = np.asarray(theta, dtype=float)
+
+        if theta.ndim != 1:
+            raise ValueError(f"theta must be a 1D array, got shape {theta.shape}.")
+        if theta.shape != (len(self._calibrated_params),):
+            raise ValueError(
+                f"Expected theta shape {(len(self._calibrated_params),)} "
+                f"for calibrated_params={self._calibrated_params}, got {theta.shape}."
+            )
+
+        params: Dict[str, float] = dict(self._fixed_params)
+        for name, value in zip(self._calibrated_params, theta):
+            value = float(value)
+            if value <= 0:
+                raise ValueError(f"Parameter {name} must be > 0, got {value}.")
+            params[name] = value
+
+        R1 = float(params["R1"])
+        R2 = float(params["R2"])
+        C = float(params["C"])
+
+        return R1, R2, C
 
     def simulate(self, t: np.ndarray, u: np.ndarray, theta: np.ndarray) -> SimulationResult:
         if t.ndim != 1 or u.ndim != 1:
@@ -127,36 +227,19 @@ class LowPassR1CR2Simulator(Simulator):
         if t.shape[0] < 2:
             raise ValueError("Need at least 2 samples to simulate.")
 
-        theta = np.asarray(theta, dtype=float)
+        R1, R2, C = self._decode_theta(theta)
 
-        # Interpret theta
-        if self._use_C:
-            if theta.shape != (1,):
-                raise ValueError("Expected theta shape (1,) for C.")
-            C = float(theta[0])
-        else:
-            if theta.shape != (1,):
-                raise ValueError("Expected theta shape (1,) for tau.")
-            tau = float(theta[0])
-            # tau = C * (R1*R2)/(R1+R2)  ->  C = tau * (R1+R2)/(R1*R2)
-            C = tau * (self._R1 + self._R2) / (self._R1 * self._R2)
-
-        if C <= 0:
-            raise ValueError("C must be > 0.")
-
-        invR1 = 1.0 / self._R1
-        invR2 = 1.0 / self._R2
+        invR1 = 1.0 / R1
+        invR2 = 1.0 / R2
 
         a = (invR1 + invR2) / C
         b = invR1 / C
 
-        # Diagnostics
         tau_eff = 1.0 / a
-        dc_gain = self._R2 / (self._R1 + self._R2)
+        dc_gain = R2 / (R1 + R2)
 
         y = np.zeros_like(u, dtype=float)
 
-        # Initial condition options
         if self._y0_mode == "zero":
             y[0] = 0.0
         elif self._y0_mode == "u0":
@@ -175,11 +258,14 @@ class LowPassR1CR2Simulator(Simulator):
         return SimulationResult(
             y=y,
             aux={
-                "R1": self._R1,
-                "R2": self._R2,
+                "R1": R1,
+                "R2": R2,
                 "C": C,
                 "a": a,
+                "b": b,
                 "tau_eff": tau_eff,
                 "dc_gain": dc_gain,
+                "calibrated_params": self._calibrated_params,
+                "fixed_params": self._fixed_params,
             },
         )
