@@ -1,3 +1,4 @@
+README.md
 pyproject.toml
 src/dtcalib/_init_.py
 src/dtcalib/calibration.py
@@ -10,4 +11,18 @@ src/dtcalib.egg-info/SOURCES.txt
 src/dtcalib.egg-info/dependency_links.txt
 src/dtcalib.egg-info/requires.txt
 src/dtcalib.egg-info/top_level.txt
+src/dtcalib/deep_learning/_init_.py
+src/dtcalib/deep_learning/dataset.py
+src/dtcalib/deep_learning/inference.py
+src/dtcalib/deep_learning/model.py
+src/dtcalib/deep_learning/train.py
+src/dtcalib/iterated_racing/_init_.py
+src/dtcalib/iterated_racing/config.py
+src/dtcalib/iterated_racing/sampler.py
+src/dtcalib/iterated_racing/search_space.py
+tests/test_calibration.py
 tests/test_data_loading.py
+tests/test_metrics.py
+tests/test_sampler.py
+tests/test_simulation.py
+tests/test_validation.py

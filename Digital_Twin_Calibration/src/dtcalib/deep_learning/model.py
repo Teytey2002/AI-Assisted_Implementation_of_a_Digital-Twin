@@ -7,25 +7,26 @@ import torch.nn.functional as F
 class RCInverseCNN(nn.Module):
     """
     Deterministic CNN 1D for inverse parameter estimation:
-    (Vin(t), Vout(t)) -> C
+    (time, Vin, Vout) -> vector of calibrated parameters
     """
 
-    def __init__(self):
+    def __init__(self, input_channels: int = 3, output_dim: int = 1):
         super().__init__()
+        
+        self.output_dim = int(output_dim)
 
-        self.conv1 = nn.Conv1d(3, 32, kernel_size=5, padding=2)
+        self.conv1 = nn.Conv1d(input_channels, 32, kernel_size=5, padding=2)
         self.conv2 = nn.Conv1d(32, 64, kernel_size=5, padding=2)
         self.conv3 = nn.Conv1d(64, 128, kernel_size=5, padding=2)
 
         self.pool = nn.MaxPool1d(2)
         self.dropout = nn.Dropout(0.3)
-
         self.global_pool = nn.AdaptiveAvgPool1d(1)
 
         self.fc1 = nn.Linear(128, 64)
-        self.fc2 = nn.Linear(64, 1)
+        self.fc2 = nn.Linear(64, self.output_dim)
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         # x: [batch, 3, T]
 
         x = self.pool(F.relu(self.conv1(x)))
@@ -36,9 +37,9 @@ class RCInverseCNN(nn.Module):
         x = torch.flatten(x, 1)  # -> [batch, 128]
 
         x = self.dropout(F.relu(self.fc1(x)))
-        x = self.fc2(x)
+        x = self.fc2(x) # [B, d]
 
-        return x.squeeze(1)  # -> [batch]
+        return x
 
 class ProbabilisticRCInverseCNN(nn.Module):
     """
@@ -58,13 +59,17 @@ class ProbabilisticRCInverseCNN(nn.Module):
 
     def __init__(
         self,
+        input_channels: int = 3,
+        output_dim: int = 1,
         dropout_p: float = 0.3,
         log_var_min: float = -20.0,
         log_var_max: float = 5.0,
     ) -> None:
         super().__init__()
 
-        self.conv1 = nn.Conv1d(3, 32, kernel_size=5, padding=2)
+        self.output_dim = int(output_dim)
+
+        self.conv1 = nn.Conv1d(input_channels, 32, kernel_size=5, padding=2)
         self.conv2 = nn.Conv1d(32, 64, kernel_size=5, padding=2)
         self.conv3 = nn.Conv1d(64, 128, kernel_size=5, padding=2)
 
@@ -77,8 +82,8 @@ class ProbabilisticRCInverseCNN(nn.Module):
         # Two heads:
         #   mu       -> predictive mean
         #   log_var  -> predictive log-variance
-        self.head_mu = nn.Linear(64, 1)
-        self.head_log_var = nn.Linear(64, 1)
+        self.head_mu = nn.Linear(64, self.output_dim)
+        self.head_log_var = nn.Linear(64, self.output_dim)
 
         self.LOG_VAR_MIN = float(log_var_min)
         self.LOG_VAR_MAX = float(log_var_max)
@@ -113,7 +118,7 @@ class ProbabilisticRCInverseCNN(nn.Module):
         # Clamp for numerical stability
         log_var = torch.clamp(log_var, self.LOG_VAR_MIN, self.LOG_VAR_MAX)
 
-        return mu.squeeze(1), log_var.squeeze(1)
+        return mu, log_var
 
     @staticmethod
     def var_from_log_var(log_var: torch.Tensor, eps: float = 1e-8) -> torch.Tensor:

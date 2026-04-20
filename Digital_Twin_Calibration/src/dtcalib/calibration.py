@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Callable, List, Optional, Sequence, Tuple, Union
+from typing import Callable, Dict, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 from scipy.optimize import least_squares
@@ -788,40 +788,55 @@ class ParticleSwarmCalibrator:
 
 @dataclass(frozen=True)
 class NormalizationStats:
-    x_mean: torch.Tensor  # shape [3]
-    x_std: torch.Tensor   # shape [3]
-    y_mean: torch.Tensor  # scalar
-    y_std: torch.Tensor   # scalar
+    x_mean: torch.Tensor          # [3]
+    x_std: torch.Tensor           # [3]
+    y_mean: torch.Tensor          # [d]
+    y_std: torch.Tensor           # [d]
+    calibrated_params: tuple[str, ...]
+    transform_map: Dict[str, str]
 
     def denormalize_y(self, y_norm: torch.Tensor) -> torch.Tensor:
         """
-        Convert normalized target back to log(C).
+        Convert normalized target back to log(y).
         """
         return y_norm * self.y_std + self.y_mean
+    
+    def normalize_y(self, y_raw: torch.Tensor) -> torch.Tensor:
+        return (y_raw - self.y_mean) / self.y_std
 
-    def inverse_target_transform(self, y_log: torch.Tensor) -> torch.Tensor:
+    def inverse_target_transform(self, y_transformed: torch.Tensor) -> torch.Tensor:
         """
-        Convert log(C) back to C in Farads.
+        y_transformed: [..., d]
+        returns physical parameters [..., d]
         """
-        return torch.exp(y_log)
-
-    def y_norm_to_C(self, y_norm: torch.Tensor) -> torch.Tensor:
-        """
-        Full inverse pipeline:
-        normalized y -> log(C) -> C
-        """
-        y_log = self.denormalize_y(y_norm)
-        return self.inverse_target_transform(y_log)
+        out = y_transformed.clone()
+        for i, p in enumerate(self.calibrated_params):
+            mode = self.transform_map.get(p, "identity")
+            if mode == "log":
+                out[..., i] = torch.exp(out[..., i])
+        return out
+    
+    def forward_target_transform(self, y_physical: torch.Tensor) -> torch.Tensor:
+        out = y_physical.clone()
+        for i, p in enumerate(self.calibrated_params):
+            mode = self.transform_map.get(p, "identity")
+            if mode == "log":
+                out[..., i] = torch.log(out[..., i])
+        return out
+    
+    def y_norm_to_physical(self, y_norm: torch.Tensor) -> torch.Tensor:
+        y_transformed = self.denormalize_y(y_norm)
+        return self.inverse_target_transform(y_transformed)
 
 
 class RCNeuralCalibrator:
     """
     Neural inverse calibrator:
       input  : time(t), Vin(t), Vout(t)
-      output : C_hat in Farads
+      output : theta_hat vector following calibrated_params order
 
     Assumption:
-      - the model was trained on log(C) with natural logarithm
+      - the model was trained on log(x) with natural logarithm
       - input normalization stats come from the training split
     """
 
@@ -840,19 +855,26 @@ class RCNeuralCalibrator:
             x_std=stats.x_std.to(self.device),
             y_mean=stats.y_mean.to(self.device),
             y_std=stats.y_std.to(self.device),
+            calibrated_params=tuple(stats.calibrated_params),
+            transform_map=dict(stats.transform_map),
         )
 
+    @property
+    def calibrated_params(self) -> tuple[str, ...]:
+        return self.stats.calibrated_params
+    
     @staticmethod
     def load(checkpoint_path: Union[str, Path], device: Optional[torch.device] = None) -> "RCNeuralCalibrator":
         checkpoint_path = Path(checkpoint_path)
         ckpt = torch.load(checkpoint_path, map_location="cpu")
 
-        model_class = ckpt.get("model_class", "RCInverseCNN")
+        model_class = ckpt["model_class"]
+        output_dim = len(tuple(ckpt["calibrated_params"]))
 
         if model_class == "RCInverseCNN":
-            model = RCInverseCNN()
+            model = RCInverseCNN(output_dim=output_dim)
         elif model_class == "ProbabilisticRCInverseCNN":
-            model = ProbabilisticRCInverseCNN()
+            model = ProbabilisticRCInverseCNN(output_dim=output_dim)
         else:
             raise ValueError(f"Unsupported model_class in checkpoint: {model_class}")
 
@@ -863,6 +885,8 @@ class RCNeuralCalibrator:
             x_std=ckpt["x_std"].float(),
             y_mean=ckpt["y_mean"].float(),
             y_std=ckpt["y_std"].float(),
+            calibrated_params=tuple(ckpt["calibrated_params"]),
+            transform_map=dict(ckpt["transform_map"]),
         )
 
         return RCNeuralCalibrator(model=model, stats=stats, device=device)
@@ -877,20 +901,14 @@ class RCNeuralCalibrator:
             return (x - self.stats.x_mean[None, :, None]) / self.stats.x_std[None, :, None]
         raise ValueError(f"Expected x with shape [3,T] or [B,3,T], got {tuple(x.shape)}")
 
-    def _denormalize_y(self, y_norm: torch.Tensor) -> torch.Tensor:
-        return self.stats.denormalize_y(y_norm)
-
-    def _inverse_target_transform(self, y_log: torch.Tensor) -> torch.Tensor:
-        return self.stats.inverse_target_transform(y_log)
-
     def predict_logC(
         self,
         time: Union[np.ndarray, torch.Tensor],
         vin: Union[np.ndarray, torch.Tensor],
         vout: Union[np.ndarray, torch.Tensor],
-    ) -> float:
+    ) -> np.ndarray:
         """
-        Returns predicted log(C) after de-normalization.
+        Returns predicted list of params in log(x) after de-normalization.
         Useful for debugging.
         """
         if isinstance(vin, np.ndarray):
@@ -918,17 +936,23 @@ class RCNeuralCalibrator:
         x = x.unsqueeze(0)  # [1, 3, T]
 
         with torch.no_grad():
-            y_norm = self.model(x).reshape(-1)   # [1]
-            y_log = self._denormalize_y(y_norm)  # [1]
+            if isinstance(self.model, ProbabilisticRCInverseCNN):
+                y_norm, _log_var = self.model(x)  # [1, d]
+            else:
+                y_norm = self.model(x)           # [1, d]
 
-        return float(y_log.item())
+        y_phys = self.stats.y_norm_to_physical(y_norm).squeeze(0)  # [d]
+        return y_phys.detach().cpu().numpy().astype(float)
 
     def predict_distribution(
         self,
         time: Union[np.ndarray, torch.Tensor],
         vin: Union[np.ndarray, torch.Tensor],
         vout: Union[np.ndarray, torch.Tensor],
-    ) -> tuple[float, Optional[float]]:
+    ) -> tuple[np.ndarray, np.ndarray]:
+        if not isinstance(self.model, ProbabilisticRCInverseCNN):
+            raise TypeError("predict_distribution is only available for ProbabilisticRCInverseCNN.")
+
         if isinstance(vin, np.ndarray):
             vin_t = torch.tensor(vin, dtype=torch.float32)
         else:
@@ -952,27 +976,19 @@ class RCNeuralCalibrator:
         x = torch.stack([time_t, vin_t, vout_t], dim=0).to(self.device) # [3, T]
         x = self._normalize_x(x)
         x = x.unsqueeze(0)  # [1, 3, T]
-
+        
         with torch.no_grad():
-            out = self.model(x)
+            mu_norm, log_var_norm = self.model(x)   # [1, d], [1, d]
 
-            if isinstance(out, tuple):
-                mu_norm, log_var_norm = out
-                mu_norm = mu_norm.reshape(-1)
-                log_var_norm = log_var_norm.reshape(-1)
+        mu_transformed = self.stats.denormalize_y(mu_norm)
+        std_transformed = torch.sqrt(torch.exp(log_var_norm)) * self.stats.y_std[None, :]
 
-                mu_log = self._denormalize_y(mu_norm)
-                std_log = self.stats.y_std * torch.sqrt(torch.exp(log_var_norm) + 1e-8)
+        mu_physical = self.stats.inverse_target_transform(mu_transformed).squeeze(0).cpu().numpy()
 
-                mu_C = self._inverse_target_transform(mu_log)
+        # approximation simple de std en espace physique
+        std_physical = std_transformed.squeeze(0).cpu().numpy()
 
-                return float(mu_C.item()), float(std_log.item())
-
-            y_norm = out.reshape(-1)    # [1]
-            y_log = self._denormalize_y(y_norm) # [1]
-            y_c = self._inverse_target_transform(y_log) # [1]
-
-            return float(y_c.item()), None
+        return mu_physical.astype(float), std_physical.astype(float)
         
     def predict(
         self,
@@ -991,61 +1007,25 @@ class RCNeuralCalibrator:
         self,
         experiments: Sequence[Experiment],
         *,
-        aggregate: str = "mean",   # "mean" or "median"
+        theta0: np.ndarray,
+        bounds: Optional[Tuple[np.ndarray, np.ndarray]] = None,
+        weights: Optional[Sequence[float]] = None,
+        max_nfev: Optional[int] = None,
     ) -> CalibrationReport:
-        """
-        Neural calibration by inference.
-
-        For each experiment:
-            - Predict C_i = f_NN(Vin_i, Vout_i) in Farads
-
-        Then:
-            - Aggregate into a global C_hat
-            - Compute empirical variance across experiment-level predictions
-        """
         if len(experiments) == 0:
             raise ValueError("Need at least one experiment.")
 
-        C_predictions: List[float] = []
-
+        preds = []
         for exp in experiments:
-            C_i = self.predict(exp.t, exp.u, exp.y)
-            C_predictions.append(C_i)
+            preds.append(self.predict_vector(exp.t, exp.u, exp.y))
 
-        C_array = np.asarray(C_predictions, dtype=float)
-        print(
-            "C preds [F]: min/max/mean/std =",
-            float(C_array.min()),
-            float(C_array.max()),
-            float(C_array.mean()),
-            float(C_array.std()),
-        )
-
-        if aggregate == "mean":
-            C_hat = float(np.mean(C_array))
-        elif aggregate == "median":
-            C_hat = float(np.median(C_array))
-        else:
-            raise ValueError("aggregate must be 'mean' or 'median'.")
-
-        empirical_variance = float(np.var(C_array))
-
-        per_metrics: List[tuple[str, MetricsResult]] = []
-
-        for exp, C_i in zip(experiments, C_array):
-            deviation = float(abs(C_i - C_hat))
-            dummy_metrics = MetricsResult(
-                rmse=deviation,
-                nmse=deviation,
-                mse=deviation,
-            )
-            per_metrics.append((exp.name, dummy_metrics))
+        theta_hat = np.mean(np.stack(preds, axis=0), axis=0)
 
         return CalibrationReport(
-            theta_hat=np.array([C_hat], dtype=float),
-            cost=empirical_variance,
+            theta_hat=theta_hat.astype(float),
+            cost=0.0,
             success=True,
-            message=f"Neural inference with {aggregate} aggregation over {len(experiments)} experiments.",
+            message="Neural calibration by averaged inverse predictions.",
             nfev=0,
-            per_experiment_metrics=per_metrics,
+            per_experiment_metrics=[],
         )

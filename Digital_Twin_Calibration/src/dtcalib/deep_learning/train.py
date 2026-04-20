@@ -18,7 +18,7 @@ from torch.utils.data import DataLoader, Subset
 from torch.utils.tensorboard import SummaryWriter
 
 from model import RCInverseCNN, ProbabilisticRCInverseCNN
-from dataset import RCSignalDataset
+from dataset import RCSignalDataset, TargetSpec
 from dtcalib.deep_learning.splits_utils import load_split, get_indices
 from dtcalib.calibration import NormalizationStats
 
@@ -127,11 +127,16 @@ def train(
     patience = 25
     max_epochs = 300
 
+    calibrated_params = ("R1", "R2", "C")
+    transform_map = {"R1": "log", "R2": "log", "C": "log"}
+    base_params = {"R1": 10_000.0, "R2": 10_000.0}  # Pour le moment car seul C est encodé dans le dossier
+    target_spec = TargetSpec(calibrated_params=calibrated_params, transform_map=transform_map)
+
+
     # -------------------------
     # Dataset
     # -------------------------
-    dataset = RCSignalDataset(dataset_root)
-    dataset.set_target_transform("logC")
+    dataset = RCSignalDataset(dataset_root, target_spec=target_spec, base_params=base_params)
 
     payload = load_split(split_json_path)
     train_idx, val_idx, test_idx = get_indices(payload)
@@ -166,6 +171,8 @@ def train(
         x_std=dataset.x_std.clone(),
         y_mean=dataset.y_mean.clone(),
         y_std=dataset.y_std.clone(),
+        calibrated_params=target_spec.calibrated_params,
+        transform_map=target_spec.transform_map,
     )
 
     train_loader = DataLoader(
@@ -270,13 +277,16 @@ def train(
         preds_all_t = torch.cat(preds_all, dim=0).float()
         targets_all_t = torch.cat(targets_all, dim=0).float()
 
-        preds_C = stats.y_norm_to_C(preds_all_t)
-        targets_C = stats.y_norm_to_C(targets_all_t)
+        preds_phys = stats.y_norm_to_C(preds_all_t)
+        targets_phys = stats.y_norm_to_C(targets_all_t)
 
-        rmse = torch.sqrt(torch.mean((preds_C - targets_C) ** 2)).item()
-        rel_error = (
-            torch.mean(torch.abs((preds_C - targets_C) / (torch.abs(targets_C) + 1e-12))) * 100.0
-        ).item()
+        rmse_per_param = torch.sqrt(torch.mean((preds_phys - targets_phys) ** 2, dim=0))
+        rel_error_per_param = torch.mean(
+            torch.abs((preds_phys - targets_phys) / (torch.abs(targets_phys) + 1e-12)),
+            dim=0,
+        ) * 100.0
+
+        rmse_global = torch.sqrt(torch.mean((preds_phys - targets_phys) ** 2)).item()
 
         scheduler.step(val_loss)
         current_lr = optimizer.param_groups[0]["lr"]
@@ -284,9 +294,12 @@ def train(
         # -------- Logging --------
         writer.add_scalar("Loss/train", train_loss, epoch)
         writer.add_scalar("Loss/val", val_loss, epoch)
-        writer.add_scalar("RMSE_C/val", rmse, epoch)
-        writer.add_scalar("RelativeError_percent/val", rel_error, epoch)
+        writer.add_scalar("RMSE_C/val", rmse_global, epoch)
         writer.add_scalar("LearningRate", current_lr, epoch)
+
+        for i, p in enumerate(calibrated_params):
+            writer.add_scalar(f"RMSE_val/{p}", rmse_per_param[i].item(), epoch)
+            writer.add_scalar(f"RelativeError_percent_val/{p}", rel_error_per_param[i].item(), epoch)
 
         if model_mode == "probabilistic" and len(pred_std_all) > 0:
             pred_std_all_t = torch.cat(pred_std_all, dim=0).float()
@@ -296,8 +309,7 @@ def train(
             f"Epoch {epoch + 1} | "
             f"TrainLoss={train_loss:.6e} | "
             f"ValLoss={val_loss:.6e} | "
-            f"RMSE(C)={rmse:.3e} | "
-            f"RelErr={rel_error:.2f}% | "
+            f"RMSE(C)={rmse_global:.3e} | "
             f"LR={current_lr:.2e}"
         )
 
