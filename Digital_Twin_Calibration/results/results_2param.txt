@@ -134,23 +134,6 @@ CV summary: {'rmse_mean': 0.13216285620745774, 'rmse_std': 0.06843397396096321, 
 
 
 
-Calibration setup
-calibrated_params = ('R2', 'C')
-fixed_params = {'R1': 10000.0}
-initialGuess = [5.e+03 3.e-06]
-bounds = (array([1.e+02, 1.e-09]), array([1.e+07, 1.e-02]))
-prior_mean = [1.e+04 1.e-06]
-prior_std = [1.e+03 5.e-07]
-CV folds: 100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 99/99 [3:28:47<00:00, 126.54s/it]
-CV summary: {'rmse_mean': 0.1321466314700511, 'rmse_std': 0.06846413844152031, 'nmse_mean': 0.007780641782892356, 'nmse_std': 0.006013347023338903}
-[held-out=dataset_+c_1p0032em06__exp_lp_002_f0p523808hz__results_lp_002_f0p523808hz] theta_hat=[9.60710888e+03 8.52851365e-07] rmse=0.247977 nmse=0.0197321
-[held-out=dataset_+c_1p0032em06__exp_lp_003_f0p548749hz__results_lp_003_f0p548749hz] theta_hat=[9.60709590e+03 8.52853392e-07] rmse=0.246618 nmse=0.019517
-[held-out=dataset_+c_1p0032em06__exp_lp_004_f0p574878hz__results_lp_004_f0p574878hz] theta_hat=[9.60716459e+03 8.52852180e-07] rmse=0.245194 nmse=0.0192929
-[held-out=dataset_+c_1p0032em06__exp_lp_005_f0p602252hz__results_lp_005_f0p602252hz] theta_hat=[9.60704481e+03 8.52853457e-07] rmse=0.243706 nmse=0.0190601
-[held-out=dataset_+c_1p0032em06__exp_lp_006_f0p630928hz__results_lp_006_f0p630928hz] theta_hat=[9.60702991e+03 8.52853808e-07] rmse=0.242149 nmse=0.0188179
-
-
-
 
 Dataset Used : dataset_+c_1p0032em06
 Parameters used : 
