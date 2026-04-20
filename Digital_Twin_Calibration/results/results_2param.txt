@@ -88,3 +88,52 @@ CV summary: {'rmse_mean': 0.13216285620745774, 'rmse_std': 0.06843397396096321, 
 [held-out=dataset_+c_1p0032em06__exp_lp_004_f0p574878hz__results_lp_004_f0p574878hz] theta_hat=[9.60852171e+03 8.52826437e-07] rmse=0.245185 nmse=0.0192915
 [held-out=dataset_+c_1p0032em06__exp_lp_005_f0p602252hz__results_lp_005_f0p602252hz] theta_hat=[9.60849792e+03 8.52826887e-07] rmse=0.243696 nmse=0.0190585
 [held-out=dataset_+c_1p0032em06__exp_lp_006_f0p630928hz__results_lp_006_f0p630928hz] theta_hat=[9.60847374e+03 8.52827545e-07] rmse=0.242139 nmse=0.0188163
+
+
+
+
+Dataset Used : dataset_+c_1p0032em06
+Parameters used : 
+
+    # --- Scenario 2: calibrate R2 and C ---
+    #calibrated_params = ("R2", "C")
+    #fixed_params = {
+    #    "R1": 10_000.0,
+    #}
+    #initialGuess = np.array([5_000.0, 3e-6], dtype=float)
+    #bounds = (
+    #    np.array([1e2, 1e-9], dtype=float),
+    #    np.array([1e7, 1e-2], dtype=float),
+    #)
+    ## For BayesianMAPCalibrator
+    #prior_mean = np.array([10_000.0, 1e-6], dtype=float)
+    #prior_std  = np.array([1_000.0, 5e-7], dtype=float)
+
+    calibrator = ParticleSwarmCalibrator(
+        simulator=simulator,
+        swarm_size=40,
+        n_iterations=100,
+        inertia=0.7,
+        cognitive=1.5,
+        social=1.5,
+        seed=42,
+        polish=True,
+    )
+
+    simulator = LowPassR1CR2Simulator(calibrated_params=calibrated_params, fixed_params=fixed_params, y0_mode="dc_from_u0")
+    cv = LeaveOneExperimentOutCV(simulator, calibrator)
+    cv_result = cv.run(ds, theta0=initialGuess, bounds=bounds, max_nfev=5000)
+y stats: min= -2.49931903 max= 2.49931901 std= 1.7653209200855435
+u stats: min= -5.0 max= 5.0 std= 3.531122757068164
+
+Calibration setup
+calibrated_params = ('R2', 'C')
+fixed_params = {'R1': 10000.0}
+initialGuess = [5.e+03 3.e-06]
+bounds = (array([1.e+02, 1.e-09]), array([1.e+07, 1.e-02]))
+prior_mean = [1.e+04 1.e-06]
+prior_std = [1.e+03 5.e-07]
+CV summary: {'rmse_mean': 0.1321469831672076, 'rmse_std': 0.06846362838025973, 'nmse_mean': 0.007780635765524154, 'nmse_std': 0.006013339339314328}
+[held-out=dataset_+c_1p0032em06__exp_lp_002_f0p523808hz__results_lp_002_f0p523808hz] theta_hat=[9.60711451e+03 8.52850345e-07] rmse=0.247977 nmse=0.0197321
+[held-out=dataset_+c_1p0032em06__exp_lp_003_f0p548749hz__results_lp_003_f0p548749hz] theta_hat=[9.60709188e+03 8.52851313e-07] rmse=0.246618 nmse=0.019517
+[held-out=dataset_+c_1p0032em06__exp_lp_004_f0p574878hz__results_lp_004_f0p574878hz] theta_hat=[9.60707317e+03 8.52852576e-07] rmse=0.245195 nmse=0.019293
