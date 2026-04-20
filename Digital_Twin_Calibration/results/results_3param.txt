@@ -72,6 +72,41 @@ Parameters used :
 y stats: min= -2.49931903 max= 2.49931901 std= 1.7653209200855435
 u stats: min= -5.0 max= 5.0 std= 3.531122757068164
 
+
+
+
+Dataset Used : dataset_+c_1p0032em06
+Parameters used : 
+
+    # --- Scenario 3: calibrate R1, R2, C ---
+    calibrated_params = ("R1", "R2", "C")
+    fixed_params = {}
+    initialGuess = np.array([3_000.0, 15_000.0, 3e-6], dtype=float)
+    bounds = (
+        np.array([1e2, 1e2, 1e-9], dtype=float),
+        np.array([1e7, 1e7, 1e-2], dtype=float),
+    )
+    # for BayesianMAPCalibrator
+    prior_mean = np.array([10_000.0, 10_000.0, 1e-6], dtype=float)
+    prior_std  = np.array([1_000.0, 1_000.0, 5e-7], dtype=float)
+
+    simulator = LowPassR1CR2Simulator(calibrated_params=calibrated_params, fixed_params=fixed_params, y0_mode="dc_from_u0")
+
+    calibrator = ParticleSwarmCalibrator(
+        simulator=simulator,
+        swarm_size=40,
+        n_iterations=100,
+        inertia=0.7,
+        cognitive=1.5,
+        social=1.5,
+        seed=42,
+        polish=True,
+    )
+
+    cv = LeaveOneExperimentOutCV(simulator, calibrator)
+    cv_result = cv.run(ds, theta0=initialGuess, bounds=bounds, max_nfev=5000)
+y stats: min= -2.49931903 max= 2.49931901 std= 1.7653209200855435
+u stats: min= -5.0 max= 5.0 std= 3.531122757068164
 Calibration setup
 calibrated_params = ('R1', 'R2', 'C')
 fixed_params = {}
