@@ -55,7 +55,7 @@ def gaussian_nll_loss(
 # ------------------------------------------------------------
 # Model factory
 # ------------------------------------------------------------
-def build_model(model_name: str) -> tuple[nn.Module, str, str]:
+def build_model(model_name: str, output_dim: int) -> tuple[nn.Module, str, str]:
     """
     Returns:
         model
@@ -65,10 +65,10 @@ def build_model(model_name: str) -> tuple[nn.Module, str, str]:
     model_name = model_name.lower()
 
     if model_name == "cnn":
-        return RCInverseCNN(), "deterministic", "RCInverseCNN"
+        return RCInverseCNN(output_dim=output_dim), "deterministic", "RCInverseCNN"
 
     if model_name == "prob_cnn":
-        return ProbabilisticRCInverseCNN(), "probabilistic", "ProbabilisticRCInverseCNN"
+        return ProbabilisticRCInverseCNN(output_dim=output_dim), "probabilistic", "ProbabilisticRCInverseCNN"
 
     raise ValueError(
         f"Unknown model '{model_name}'. Supported values: 'cnn', 'prob_cnn'."
@@ -196,7 +196,7 @@ def train(
     # -------------------------
     # Model
     # -------------------------
-    model, model_mode, model_class_name = build_model(model_name)
+    model, model_mode, model_class_name = build_model(model_name, output_dim=len(calibrated_params))
     model = model.to(device)
 
     optimizer = optim.Adam(
@@ -277,8 +277,8 @@ def train(
         preds_all_t = torch.cat(preds_all, dim=0).float()
         targets_all_t = torch.cat(targets_all, dim=0).float()
 
-        preds_phys = stats.y_norm_to_C(preds_all_t)
-        targets_phys = stats.y_norm_to_C(targets_all_t)
+        preds_phys = stats.y_norm_to_physical(preds_all_t)
+        targets_phys = stats.y_norm_to_physical(targets_all_t)
 
         rmse_per_param = torch.sqrt(torch.mean((preds_phys - targets_phys) ** 2, dim=0))
         rel_error_per_param = torch.mean(
@@ -326,7 +326,8 @@ def train(
                     "y_std": dataset.y_std,
                     "model_class": model_class_name,
                     "model_mode": model_mode,
-                    "target_transform": "logC",
+                    "calibrated_params": calibrated_params,
+                    "transform_map": transform_map,
                     "dataset_root": str(dataset_root),
                     "split_json": str(split_json_path),
                     "model_name_arg": model_name,

@@ -901,49 +901,6 @@ class RCNeuralCalibrator:
             return (x - self.stats.x_mean[None, :, None]) / self.stats.x_std[None, :, None]
         raise ValueError(f"Expected x with shape [3,T] or [B,3,T], got {tuple(x.shape)}")
 
-    def predict_logC(
-        self,
-        time: Union[np.ndarray, torch.Tensor],
-        vin: Union[np.ndarray, torch.Tensor],
-        vout: Union[np.ndarray, torch.Tensor],
-    ) -> np.ndarray:
-        """
-        Returns predicted list of params in log(x) after de-normalization.
-        Useful for debugging.
-        """
-        if isinstance(vin, np.ndarray):
-            vin_t = torch.tensor(vin, dtype=torch.float32)
-        else:
-            vin_t = vin.float()
-
-        if isinstance(vout, np.ndarray):
-            vout_t = torch.tensor(vout, dtype=torch.float32)
-        else:
-            vout_t = vout.float()
-        
-        if isinstance(time, np.ndarray):
-            time_t = torch.tensor(time, dtype=torch.float32)
-        else:
-            time_t = time.float()
-
-        if vin_t.ndim != 1 or vout_t.ndim != 1 or time_t.ndim != 1:
-            raise ValueError("vin and vout and time must be 1D arrays (shape [T]).")
-        if not (vin_t.shape[0] == vout_t.shape[0] == time_t.shape[0]):
-            raise ValueError("vin and vout and time must have the same length T.")
-
-        x = torch.stack([time_t, vin_t, vout_t], dim=0).to(self.device)  # [3, T]
-        x = self._normalize_x(x)
-        x = x.unsqueeze(0)  # [1, 3, T]
-
-        with torch.no_grad():
-            if isinstance(self.model, ProbabilisticRCInverseCNN):
-                y_norm, _log_var = self.model(x)  # [1, d]
-            else:
-                y_norm = self.model(x)           # [1, d]
-
-        y_phys = self.stats.y_norm_to_physical(y_norm).squeeze(0)  # [d]
-        return y_phys.detach().cpu().numpy().astype(float)
-
     def predict_distribution(
         self,
         time: Union[np.ndarray, torch.Tensor],
@@ -995,37 +952,46 @@ class RCNeuralCalibrator:
         time: Union[np.ndarray, torch.Tensor],
         vin: Union[np.ndarray, torch.Tensor],
         vout: Union[np.ndarray, torch.Tensor],
-    ) -> float:
+    ) -> np.ndarray:
         """
-        vin, vout: arrays of shape [T]
-        returns: C_hat in Farads
+        Deterministic prediction for both:
+        - RCInverseCNN
+        - ProbabilisticRCInverseCNN (returns the mean only)
+
+        Returns
+        -------
+        np.ndarray
+            Predicted physical parameters, shape [d]
         """
-        pred_C, _ = self.predict_distribution(time, vin, vout)
-        return pred_C
+        if isinstance(vin, np.ndarray):
+            vin_t = torch.tensor(vin, dtype=torch.float32)
+        else:
+            vin_t = vin.float()
 
-    def calibrate(
-        self,
-        experiments: Sequence[Experiment],
-        *,
-        theta0: np.ndarray,
-        bounds: Optional[Tuple[np.ndarray, np.ndarray]] = None,
-        weights: Optional[Sequence[float]] = None,
-        max_nfev: Optional[int] = None,
-    ) -> CalibrationReport:
-        if len(experiments) == 0:
-            raise ValueError("Need at least one experiment.")
+        if isinstance(vout, np.ndarray):
+            vout_t = torch.tensor(vout, dtype=torch.float32)
+        else:
+            vout_t = vout.float()
 
-        preds = []
-        for exp in experiments:
-            preds.append(self.predict_vector(exp.t, exp.u, exp.y))
+        if isinstance(time, np.ndarray):
+            time_t = torch.tensor(time, dtype=torch.float32)
+        else:
+            time_t = time.float()
 
-        theta_hat = np.mean(np.stack(preds, axis=0), axis=0)
+        if vin_t.ndim != 1 or vout_t.ndim != 1 or time_t.ndim != 1:
+            raise ValueError("vin, vout and time must be 1D arrays (shape [T]).")
+        if not (vin_t.shape[0] == vout_t.shape[0] == time_t.shape[0]):
+            raise ValueError("vin, vout and time must have the same length T.")
 
-        return CalibrationReport(
-            theta_hat=theta_hat.astype(float),
-            cost=0.0,
-            success=True,
-            message="Neural calibration by averaged inverse predictions.",
-            nfev=0,
-            per_experiment_metrics=[],
-        )
+        x = torch.stack([time_t, vin_t, vout_t], dim=0).to(self.device)  # [3, T]
+        x = self._normalize_x(x)
+        x = x.unsqueeze(0)  # [1, 3, T]
+
+        with torch.no_grad():
+            if isinstance(self.model, ProbabilisticRCInverseCNN):
+                y_norm, _ = self.model(x)   # [1, d]
+            else:
+                y_norm = self.model(x)      # [1, d]
+
+        y_phys = self.stats.y_norm_to_physical(y_norm).squeeze(0)  # [d]
+        return y_phys.detach().cpu().numpy().astype(float)
