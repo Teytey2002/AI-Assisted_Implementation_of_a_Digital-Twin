@@ -1,0 +1,5 @@
+{
+    "python.analysis.extraPaths": [
+        "./Digital_Twin_Calibration/src"
+    ]
+}
