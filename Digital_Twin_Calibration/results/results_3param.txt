@@ -124,6 +124,47 @@ CV summary: {'rmse_mean': 0.13215582177700164, 'rmse_std': 0.06844768417297908, 
 
 
 
+
+
+Dataset Used : dataset_+c_1p0032em06
+Parameters used : 
+
+    # --- Scenario 3: calibrate R1, R2, C ---
+    calibrated_params = ("R1", "R2", "C")
+    fixed_params = {}
+    initialGuess = np.array([3_000.0, 15_000.0, 3e-6], dtype=float)
+    bounds = (
+        np.array([1e2, 1e2, 1e-9], dtype=float),
+        np.array([1e7, 1e7, 1e-2], dtype=float),
+    )
+    # for BayesianMAPCalibrator
+    prior_mean = np.array([10_000.0, 10_000.0, 1e-6], dtype=float)
+    prior_std  = np.array([1_000.0, 1_000.0, 5e-7], dtype=float)
+
+    simulator = LowPassR1CR2Simulator(calibrated_params=calibrated_params, fixed_params=fixed_params, y0_mode="dc_from_u0")
+
+    calibrator = GeneticAlgorithmCalibrator(
+        simulator=simulator,
+        population_size=80,
+        n_generations=120,
+        crossover_rate=0.9,
+        mutation_rate=0.2,
+        mutation_scale=0.15,
+        elite_fraction=0.1,
+        init_near_theta0_fraction=0.5,
+        init_near_theta0_scale=0.25,
+        mutation_mode="log",
+        seed=42,
+        polish=True,
+        polish_method="trf",
+        polish_loss="linear",
+        polish_f_scale=1.0,
+    )
+
+    cv = LeaveOneExperimentOutCV(simulator, calibrator)
+    cv_result = cv.run(ds, theta0=initialGuess, bounds=bounds, max_nfev=5000)
+y stats: min= -2.49931903 max= 2.49931901 std= 1.7653209200855435
+u stats: min= -5.0 max= 5.0 std= 3.531122757068164
 y stats: min= -2.49931903 max= 2.49931901 std= 1.7653209200855435
 u stats: min= -5.0 max= 5.0 std= 3.531122757068164
 
@@ -134,7 +175,10 @@ initialGuess = [3.0e+03 1.5e+04 3.0e-06]
 bounds = (array([1.e+02, 1.e+02, 1.e-09]), array([1.e+07, 1.e+07, 1.e-02]))
 prior_mean = [1.e+04 1.e+04 1.e-06]
 prior_std = [1.e+03 1.e+03 5.e-07]
-CV summary: {'rmse_mean': 0.13214689044990893, 'rmse_std': 0.06846372219873616, 'nmse_mean': 0.007780623634795607, 'nmse_std': 0.006013336159354681}
-[held-out=dataset_+c_1p0032em06__exp_lp_002_f0p523808hz__results_lp_002_f0p523808hz] theta_hat=[8.52851420e+06 8.19344289e+06 1.00000000e-09] rmse=0.247977 nmse=0.0197321
-[held-out=dataset_+c_1p0032em06__exp_lp_003_f0p548749hz__results_lp_003_f0p548749hz] theta_hat=[8.52851598e+06 8.19342517e+06 1.00000000e-09] rmse=0.246618 nmse=0.019517
-[held-out=dataset_+c_1p0032em06__exp_lp_004_f0p574878hz__results_lp_004_f0p574878hz] theta_hat=[8.52851882e+06 8.19340796e+06 1.00000000e-09] rmse=0.245195 nmse=0.019293
+CV folds: 100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 99/99 [3:31:03<00:00, 127.91s/it]
+CV summary: {'rmse_mean': 0.13214718932390232, 'rmse_std': 0.06846348957614129, 'nmse_mean': 0.007780664083506736, 'nmse_std': 0.006013331569837435}
+[held-out=dataset_+c_1p0032em06__exp_lp_002_f0p523808hz__results_lp_002_f0p523808hz] theta_hat=[5.86668573e+03 5.63619602e+03 1.45372039e-06] rmse=0.247977 nmse=0.0197321
+[held-out=dataset_+c_1p0032em06__exp_lp_003_f0p548749hz__results_lp_003_f0p548749hz] theta_hat=[5.75539000e+03 5.52925601e+03 1.48183140e-06] rmse=0.246618 nmse=0.019517
+[held-out=dataset_+c_1p0032em06__exp_lp_004_f0p574878hz__results_lp_004_f0p574878hz] theta_hat=[5.72779194e+03 5.50272978e+03 1.48897147e-06] rmse=0.245195 nmse=0.019293
+[held-out=dataset_+c_1p0032em06__exp_lp_005_f0p602252hz__results_lp_005_f0p602252hz] theta_hat=[5.72437696e+03 5.49943537e+03 1.48986054e-06] rmse=0.243706 nmse=0.0190601
+[held-out=dataset_+c_1p0032em06__exp_lp_006_f0p630928hz__results_lp_006_f0p630928hz] theta_hat=[5.26912840e+03 5.06206021e+03 1.61858902e-06] rmse=0.242149 nmse=0.0188179
