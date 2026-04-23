@@ -5,11 +5,17 @@ data/
 # logs
 *.log
 
-# cache
-__pycache__/
-
 # Python bytecode (Created to accelerate compilation)
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
+
+# Build / packaging
+*.egg-info/
+build/
+dist/
+
+# Models
+*.pth
+*.joblib
