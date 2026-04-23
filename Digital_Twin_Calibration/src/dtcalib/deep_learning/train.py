@@ -127,16 +127,20 @@ def train(
     patience = 25
     max_epochs = 300
 
-    calibrated_params = ("R1", "R2", "C")
-    transform_map = {"R1": "log", "R2": "log", "C": "log"}
-    base_params = {"R1": 10_000.0, "R2": 10_000.0}  # Pour le moment car seul C est encodé dans le dossier
+    # Modified if needed to train the model to predict differents number of parameters
+    #calibrated_params = ("R1", "R2", "C")
+    #transform_map = {"R1": "log", "R2": "log", "C": "log"}
+    calibrated_params = ("R2", "C")
+    transform_map = {"R2": "log", "C": "log"}
+    #calibrated_params = ("C",)
+    #transform_map = {"C": "log"}
     target_spec = TargetSpec(calibrated_params=calibrated_params, transform_map=transform_map)
 
 
     # -------------------------
     # Dataset
     # -------------------------
-    dataset = RCSignalDataset(dataset_root, target_spec=target_spec, base_params=base_params)
+    dataset = RCSignalDataset(dataset_root, target_spec=target_spec, manifest_name="manifest.csv")
 
     payload = load_split(split_json_path)
     train_idx, val_idx, test_idx = get_indices(payload)

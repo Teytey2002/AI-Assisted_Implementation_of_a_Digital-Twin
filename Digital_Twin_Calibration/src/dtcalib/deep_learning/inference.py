@@ -1,3 +1,15 @@
+"""
+Inference script for evaluating a trained RCNeuralCalibrator on the test split.
+
+Usage example:
+python3 inference.py \
+  --checkpoint models/cnn_2026-04-23_14-14-14_best.pth \
+  --root-dir ../../../data/LP_DATASET_R1_R2_C \
+  --split-json ./splits/rc_r1r2c_nested_fold0.json \
+  --device cuda \
+  --aggregate mean
+"""
+
 from __future__ import annotations
 
 import argparse
@@ -35,16 +47,6 @@ def _aggregate_array(values: np.ndarray, mode: str) -> float:
         return float(np.median(values))
     raise ValueError("aggregate must be 'mean' or 'median'")
 
-
-def _safe_float(x: Any) -> float | None:
-    if x is None:
-        return None
-    try:
-        return float(x)
-    except Exception:
-        return None
-
-
 # ---------------------------------------------------------------------
 # Core inference
 # ---------------------------------------------------------------------
@@ -56,16 +58,11 @@ def run_inference(
     device: str = "cuda",
     aggregate: str = "mean",
     save_csv: bool = True,
-    base_params: dict[str, float] | None = None,
+    manifest_name: str = "manifest.csv",
 ) -> None:
     checkpoint_path = Path(checkpoint_path)
     root_dir = Path(root_dir)
     split_json_path = Path(split_json_path)
-
-    if base_params is None:
-        # Useful fallback for the current RC dataset where only C is encoded
-        # in folder names and R1/R2 are often fixed by design.
-        base_params = {"R1": 10_000.0, "R2": 10_000.0}
 
     device_t = torch.device(device if torch.cuda.is_available() else "cpu")
 
@@ -97,7 +94,7 @@ def run_inference(
     dataset = RCSignalDataset(
         root_dir,
         target_spec=target_spec,
-        base_params=base_params,
+        manifest_name=manifest_name,
     )
 
     # ------------------------------------------------------------------
@@ -127,11 +124,12 @@ def run_inference(
         pred_vec: np.ndarray
         pred_std_vec: np.ndarray | None = None
 
-        # Prefer probabilistic prediction when available
+        # Probabilistic model -> mean + std
+        # Deterministic model -> mean only
         try:
             pred_vec, pred_std_vec = calibrator.predict_distribution(time, vin, vout)
-        except Exception:
-            pred_vec = calibrator.predict_vector(time, vin, vout)
+        except TypeError:
+            pred_vec = calibrator.predict(time, vin, vout)
             pred_std_vec = None
 
         pred_vec = np.asarray(pred_vec, dtype=np.float64)
@@ -304,11 +302,8 @@ def main() -> None:
     parser.add_argument("--split-json", type=str, required=True, help="Path to split JSON")
     parser.add_argument("--device", type=str, default="cuda", help="cuda or cpu")
     parser.add_argument("--aggregate", type=str, default="mean", choices=["mean", "median"])
+    parser.add_argument("--manifest-name", type=str, default="manifest.csv", help="Manifest CSV name")
     parser.add_argument("--no-save-csv", action="store_true", help="Do not save prediction CSV files")
-
-    # Optional overrides for base parameters when not encoded in file names
-    parser.add_argument("--base-r1", type=float, default=10_000.0, help="Default/fixed R1 value")
-    parser.add_argument("--base-r2", type=float, default=10_000.0, help="Default/fixed R2 value")
 
     args = parser.parse_args()
 
@@ -319,10 +314,7 @@ def main() -> None:
         device=args.device,
         aggregate=args.aggregate,
         save_csv=not args.no_save_csv,
-        base_params={
-            "R1": args.base_r1,
-            "R2": args.base_r2,
-        },
+        manifest_name=args.manifest_name,
     )
 
 

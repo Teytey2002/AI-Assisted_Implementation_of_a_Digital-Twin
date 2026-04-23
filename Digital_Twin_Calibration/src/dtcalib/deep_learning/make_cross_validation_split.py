@@ -1,60 +1,81 @@
 # src/dtcalib/deep_learning/make_cv_splits.py
 """
-test = le fold externe tenu à l’écart
-train/val = split fait sur les autres groupes de C
+test = external fold held out (unseen physical systems)
+train/val = split performed on the remaining systems
 
-Donc pour chaque fold_id :
-- test_idx = toutes les samples des C du fold
+Each system is defined by a triplet (R1, R2, C)
 
-sur les C restants :
-- une partie en train
-- une partie en val
+For each fold_id:
+- test_idx = all samples belonging to the selected (R1, R2, C) groups
 
-Conclusion : 
-train_idx, val_idx, test_idx n’ont aucun C en commun
+On the remaining groups:
+- a subset is used for training
+- a subset is used for validation
 
-Command to use it : 
-python3 make_cv_splits.py \
-  --root-dir ../../../data/ALL_LP_DATASETS_CSV_Deep_learning \
+Conclusion:
+train_idx, val_idx, test_idx share no common (R1, R2, C) combinations
+
+This ensures the model is evaluated on completely unseen systems,
+which is consistent with a real-world calibration scenario.
+
+Command to use it:
+python3 make_cross_validation_split.py \
+  --root-dir ../../../data/LP_DATASET_R1_R2_C \
   --k 5 \
   --seed 42 \
-  --out-prefix rc_nested \
+  --out-prefix rc_r1r2c_nested \
   --val-ratio 0.2
 """
 from __future__ import annotations
 
 import json
-import numpy as np
-from pathlib import Path
 from collections import defaultdict
-from typing import Dict, List, Any
+from pathlib import Path
+from typing import Dict, List, Any, Tuple
 
-from dtcalib.deep_learning.splits_utils import parse_samples
+import numpy as np
+
+from dtcalib.deep_learning.splits_utils import parse_samples_from_manifest
+
 
 SPLIT_DIR = Path(__file__).resolve().parent / "splits"
 
 
-def main():
+def group_key_from_sample(sample: dict[str, Any], decimals: int = 12) -> Tuple[float, float, float]:
+    """
+    Build a robust grouping key for one physical system.
+    By default, group = unique triplet (R1, R2, C).
+    Rounding is used only to avoid tiny float representation noise.
+    """
+    return (
+        round(float(sample["R1"]), decimals),
+        round(float(sample["R2"]), decimals),
+        round(float(sample["C"]), decimals),
+    )
+
+
+def main() -> None:
     import argparse
+
     p = argparse.ArgumentParser()
-    p.add_argument("--root-dir", type=str, required=True)
-    p.add_argument("--k", type=int, default=5)
+    p.add_argument("--root-dir", type=str, required=True, help="Dataset root containing manifest.csv")
+    p.add_argument("--k", type=int, default=5, help="Number of outer folds")
     p.add_argument("--seed", type=int, default=42)
-    p.add_argument("--out-prefix", type=str, default="rc_cv")
-    p.add_argument("--val-ratio", type=float, default=0.2)  # fraction of remaining C groups used for val
+    p.add_argument("--out-prefix", type=str, default="rc_nested")
+    p.add_argument(
+        "--val-ratio",
+        type=float,
+        default=0.2,
+        help="Fraction of remaining groups used for validation inside each outer fold",
+    )
     args = p.parse_args()
 
     root_dir = Path(args.root_dir)
-    samples = parse_samples(root_dir)
+    samples = parse_samples_from_manifest(root_dir)
+
     if len(samples) == 0:
-        raise ValueError("0 samples trouvés. Vérifie le root-dir et le regex +c_...")
+        raise ValueError("No samples found in manifest.")
 
-    # Group sample indices by C value
-    groups: Dict[float, List[int]] = defaultdict(list)
-    for idx, (_path, cval) in enumerate(samples):
-        groups[cval].append(idx)
-
-    c_values = sorted(groups.keys())
     k = int(args.k)
     if k < 2:
         raise ValueError("k must be >= 2")
@@ -62,46 +83,69 @@ def main():
     if not (0.0 < args.val_ratio < 1.0):
         raise ValueError("--val-ratio must be in (0, 1)")
 
+    # ------------------------------------------------------------
+    # Group sample indices by physical-system triplet (R1, R2, C)
+    # ------------------------------------------------------------
+    groups: Dict[Tuple[float, float, float], List[int]] = defaultdict(list)
+    for idx, sample in enumerate(samples):
+        key = group_key_from_sample(sample)
+        groups[key].append(idx)
+
+    group_keys = list(groups.keys())
+    if len(group_keys) < k:
+        raise ValueError(
+            f"Not enough unique groups ({len(group_keys)}) for k={k}. "
+            "Reduce k or generate more systems."
+        )
+
     rng = np.random.default_rng(args.seed)
+    group_keys = list(group_keys)
+    rng.shuffle(group_keys)
 
-    c_values = np.array(c_values, dtype=float)
-    rng.shuffle(c_values)
+    # Outer CV folds = TEST groups (pure Python split, keeps tuples hashable)
+    outer_test_folds = []
+    n_groups = len(group_keys)
 
-    # Outer CV folds: these are the TEST groups
-    c_test_folds = np.array_split(c_values, k)
+    for fold_id in range(k):
+        start = fold_id * n_groups // k
+        end = (fold_id + 1) * n_groups // k
+        outer_test_folds.append(group_keys[start:end])
 
     SPLIT_DIR.mkdir(parents=True, exist_ok=True)
 
-    for fold_id, cval_test in enumerate(c_test_folds):
-        test_c_set = set(map(float, cval_test.tolist()))
+    for fold_id, test_group_keys in enumerate(outer_test_folds):
+        test_group_keys = list(test_group_keys)
+        test_group_set = set(test_group_keys)
 
-        # Remaining C groups used for train/val split
-        remaining_c = [float(c) for c in c_values.tolist() if float(c) not in test_c_set]
-        remaining_c = np.array(remaining_c, dtype=float)
+        # Remaining groups for train/val
+        remaining_group_keys = [g for g in group_keys if g not in test_group_set]
+
         rng_inner = np.random.default_rng(args.seed + fold_id)
-        rng_inner.shuffle(remaining_c)
+        rng_inner.shuffle(remaining_group_keys)
 
-        n_remaining = len(remaining_c)
+        n_remaining = len(remaining_group_keys)
         n_val_groups = max(1, int(round(args.val_ratio * n_remaining)))
-        n_val_groups = min(n_val_groups, n_remaining - 1)  # keep at least 1 group for train
+        n_val_groups = min(n_val_groups, n_remaining - 1)  # keep at least one train group
 
-        val_c_set = set(map(float, remaining_c[:n_val_groups].tolist()))
-        train_c_set = set(map(float, remaining_c[n_val_groups:].tolist()))
+        val_group_keys = remaining_group_keys[:n_val_groups]
+        train_group_keys = remaining_group_keys[n_val_groups:]
+
+        train_group_set = set(train_group_keys)
+        val_group_set = set(val_group_keys)
 
         train_idx: List[int] = []
         val_idx: List[int] = []
         test_idx: List[int] = []
 
-        for cval, idxs in groups.items():
-            cval_f = float(cval)
-            if cval_f in test_c_set:
+        for group_key, idxs in groups.items():
+            if group_key in test_group_set:
                 test_idx.extend(idxs)
-            elif cval_f in val_c_set:
+            elif group_key in val_group_set:
                 val_idx.extend(idxs)
-            elif cval_f in train_c_set:
+            elif group_key in train_group_set:
                 train_idx.extend(idxs)
             else:
-                raise RuntimeError(f"C value {cval_f} not assigned to train/val/test.")
+                raise RuntimeError(f"Group {group_key} not assigned to train/val/test.")
 
         rng_inner.shuffle(train_idx)
         rng_inner.shuffle(val_idx)
@@ -112,23 +156,30 @@ def main():
             "cv": {
                 "k": k,
                 "fold": fold_id,
-                "group": "C_value",
+                "group": "R1_R2_C_triplet",
                 "val_ratio_within_remaining_groups": args.val_ratio,
             },
             "root_dir": str(root_dir),
             "n_samples": len(samples),
+            "n_groups": len(groups),
             "n_train": len(train_idx),
             "n_val": len(val_idx),
             "n_test": len(test_idx),
-            "samples": [{"csv_path": p, "C_value": c} for (p, c) in samples],
+            "samples": samples,
             "indices": {
                 "train": train_idx,
                 "val": val_idx,
                 "test": test_idx,
             },
-            "train_C_values": sorted(list(train_c_set)),
-            "val_C_values": sorted(list(val_c_set)),
-            "test_C_values": sorted(list(test_c_set)),
+            "train_groups": [
+                {"R1": g[0], "R2": g[1], "C": g[2]} for g in sorted(train_group_keys)
+            ],
+            "val_groups": [
+                {"R1": g[0], "R2": g[1], "C": g[2]} for g in sorted(val_group_keys)
+            ],
+            "test_groups": [
+                {"R1": g[0], "R2": g[1], "C": g[2]} for g in sorted(test_group_keys)
+            ],
         }
 
         out_path = SPLIT_DIR / f"{args.out_prefix}_fold{fold_id}.json"
@@ -137,7 +188,8 @@ def main():
 
         print(
             f"✅ Fold {fold_id}: "
-            f"train={len(train_idx)} | val={len(val_idx)} | test={len(test_idx)} "
+            f"groups(train/val/test)=({len(train_group_keys)}/{len(val_group_keys)}/{len(test_group_keys)}) | "
+            f"samples(train/val/test)=({len(train_idx)}/{len(val_idx)}/{len(test_idx)}) "
             f"-> {out_path}"
         )
 

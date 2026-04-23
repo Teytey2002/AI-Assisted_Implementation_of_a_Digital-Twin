@@ -63,21 +63,18 @@ class TargetSpec:
         if values.shape != (self.output_dim,):
             raise ValueError(f"Expected shape {(self.output_dim,)}, got {values.shape}.")
         return {p: float(values[i]) for i, p in enumerate(self.calibrated_params)}
-    
-def _extract_C_from_folder_name(folder_name: str) -> Optional[float]:
-    match = re.search(r"\+c_([0-9p]+e[m|p][0-9]+)", folder_name)
-    if match is None:
-        return None
-    c_token = match.group(1)
-    c_str = c_token.replace("p", ".").replace("em", "e-").replace("ep", "e+")
-    return float(c_str)
 
 class RCSignalDataset(Dataset):
     """
-    Generic dataset for inverse calibration from signals.
+    Dataset based on a manifest.csv file.
+
+    Expected manifest columns:
+      group_name, experiment_name, csv_path, R1, R2, C, fc, freq,
+      amplitude, phase, offset, n_periods, samples_per_period, n_samples
+
     Returns:
-      x: [3, T]
-      y: [d]
+      x: [3, T]   = [time, input, output]
+      y: [d]      = transformed target vector following TargetSpec
     """
 
     def __init__(
@@ -85,11 +82,11 @@ class RCSignalDataset(Dataset):
         root_dir: Path | str,
         *,
         target_spec: TargetSpec,
-        base_params: Optional[Dict[str, float]] = None,
+        manifest_name: str = "manifest.csv",
     ):
         self.root_dir = Path(root_dir)
         self.target_spec = target_spec
-        self.base_params = {} if base_params is None else dict(base_params)
+        self.manifest_path = self.root_dir / manifest_name
 
         self.samples: list[tuple[Path, Dict[str, float]]] = []
         self.cache: Dict[Path, tuple[torch.Tensor, torch.Tensor, torch.Tensor]] = {}
@@ -99,29 +96,40 @@ class RCSignalDataset(Dataset):
         self.y_mean: Optional[torch.Tensor] = None   # [d]
         self.y_std: Optional[torch.Tensor] = None    # [d]
 
-        self._build_index()
+        self._build_index_from_manifest()
 
-    def _build_index(self) -> None:
+    def _build_index_from_manifest(self) -> None:
         if not self.root_dir.exists():
             raise FileNotFoundError(f"Dataset root not found: {self.root_dir}")
+        if not self.manifest_path.exists():
+            raise FileNotFoundError(f"Manifest not found: {self.manifest_path}")
 
-        for dataset_folder in sorted(self.root_dir.iterdir()):
-            if not dataset_folder.is_dir():
-                continue
+        df = pd.read_csv(self.manifest_path)
 
-            c_value = _extract_C_from_folder_name(dataset_folder.name)
-            param_dict = dict(self.base_params)
+        required_cols = {"csv_path", "R1", "R2", "C"}
+        missing = required_cols - set(df.columns)
+        if missing:
+            raise ValueError(
+                f"Manifest is missing required columns: {sorted(missing)}"
+            )
 
-            if c_value is not None:
-                param_dict["C"] = c_value
+        for _, row in df.iterrows():
+            csv_rel = Path(str(row["csv_path"]))
+            csv_path = self.root_dir / csv_rel
 
-            for csv_file in sorted(dataset_folder.rglob("*.csv")):
-                if "results" not in csv_file.name.lower():
-                    continue
-                self.samples.append((csv_file, dict(param_dict)))
+            if not csv_path.exists():
+                raise FileNotFoundError(f"CSV file listed in manifest does not exist: {csv_path}")
+
+            param_dict = {
+                "R1": float(row["R1"]),
+                "R2": float(row["R2"]),
+                "C": float(row["C"]),
+            }
+
+            self.samples.append((csv_path, param_dict))
 
         if len(self.samples) == 0:
-            raise ValueError("No samples found in dataset.")
+            raise ValueError("No samples found in manifest.")
 
     def __len__(self) -> int:
         return len(self.samples)
@@ -147,18 +155,19 @@ class RCSignalDataset(Dataset):
             csv_path, param_dict = self.samples[idx]
             df = pd.read_csv(csv_path)
 
+            # Expect first 3 columns to be time, input, output
             time = df.iloc[:, 0].values
             vin = df.iloc[:, 1].values
             vout = df.iloc[:, 2].values
 
-            x = np.stack([time, vin, vout], axis=0)     # [3, T]
+            x = np.stack([time, vin, vout], axis=0)            # [3, T]
             y = self.target_spec.transform_vector(param_dict)  # [d]
 
             xs.append(x)
             ys.append(y)
 
-        xs = np.concatenate(xs, axis=1)        # [3, total_T]
-        ys = np.stack(ys, axis=0)              # [N, d]
+        xs = np.concatenate(xs, axis=1)   # [3, total_T]
+        ys = np.stack(ys, axis=0)         # [N, d]
 
         self.x_mean = torch.tensor(xs.mean(axis=1), dtype=torch.float32)
         self.x_std = torch.tensor(xs.std(axis=1) + 1e-8, dtype=torch.float32)
@@ -171,9 +180,11 @@ class RCSignalDataset(Dataset):
 
         if csv_path not in self.cache:
             df = pd.read_csv(csv_path)
+
             time = torch.tensor(df.iloc[:, 0].values, dtype=torch.float32)
             vin = torch.tensor(df.iloc[:, 1].values, dtype=torch.float32)
             vout = torch.tensor(df.iloc[:, 2].values, dtype=torch.float32)
+
             self.cache[csv_path] = (time, vin, vout)
 
         time, vin, vout = self.cache[csv_path]

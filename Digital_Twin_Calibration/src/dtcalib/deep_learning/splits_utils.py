@@ -1,9 +1,11 @@
 # src/dtcalib/deep_learning/splits_utils.py
 from __future__ import annotations
+
 import json
 from pathlib import Path
-from typing import Dict, List, Any
-import re
+from typing import Dict, Any
+
+import pandas as pd
 
 
 def load_split(split_json_path: str | Path) -> Dict[str, Any]:
@@ -18,33 +20,65 @@ def get_indices(payload: Dict[str, Any]) -> tuple[list[int], list[int], list[int
     return idx["train"], idx["val"], idx["test"]
 
 
-def parse_samples(root_dir: Path):
+def parse_samples_from_manifest(
+    root_dir: str | Path,
+    manifest_name: str = "manifest.csv",
+) -> list[dict[str, Any]]:
     """
-    Reproduit la logique de RCSignalDataset:
-    - détecte les dossiers dataset_+c_...
-    - extrait C_value
-    - récupère tous les CSV 'results*.csv'
-    Retourne une liste ordonnée et déterministe:
-        samples = [(csv_path_str, C_value_float), ...]
+    Read dataset samples from manifest.csv.
+
+    Returns a deterministic ordered list of dicts:
+        [
+            {
+                "csv_path": "<absolute path>",
+                "group_name": "...",
+                "experiment_name": "...",
+                "R1": ...,
+                "R2": ...,
+                "C": ...,
+                "fc": ...,
+                "freq": ...,
+            },
+            ...
+        ]
     """
     root_dir = Path(root_dir)
-    samples = []
+    manifest_path = root_dir / manifest_name
 
-    for c_folder in sorted(root_dir.iterdir()):
-        if not c_folder.is_dir():
-            continue
+    if not root_dir.exists():
+        raise FileNotFoundError(f"Dataset root not found: {root_dir}")
+    if not manifest_path.exists():
+        raise FileNotFoundError(f"Manifest not found: {manifest_path}")
 
-        match = re.search(r"\+c_([0-9p]+e[m|p][0-9]+)", c_folder.name)
-        if match is None:
-            continue
+    df = pd.read_csv(manifest_path)
 
-        c_token = match.group(1)
-        c_str = c_token.replace("p", ".").replace("em", "e-").replace("ep", "e+")
-        C_value = float(c_str)
+    required_cols = {"csv_path", "R1", "R2", "C"}
+    missing = required_cols - set(df.columns)
+    if missing:
+        raise ValueError(
+            f"Manifest is missing required columns: {sorted(missing)}"
+        )
 
-        for csv_file in sorted(c_folder.rglob("*.csv")):
-            if "results" not in csv_file.name.lower():
-                continue
-            samples.append((str(csv_file), C_value))
+    samples: list[dict[str, Any]] = []
+
+    for _, row in df.iterrows():
+        rel_csv = Path(str(row["csv_path"]))
+        abs_csv = root_dir / rel_csv
+
+        sample = {
+            "csv_path": str(abs_csv),
+            "group_name": str(row["group_name"]) if "group_name" in df.columns else "",
+            "experiment_name": str(row["experiment_name"]) if "experiment_name" in df.columns else "",
+            "R1": float(row["R1"]),
+            "R2": float(row["R2"]),
+            "C": float(row["C"]),
+        }
+
+        if "fc" in df.columns:
+            sample["fc"] = float(row["fc"])
+        if "freq" in df.columns:
+            sample["freq"] = float(row["freq"])
+
+        samples.append(sample)
 
     return samples

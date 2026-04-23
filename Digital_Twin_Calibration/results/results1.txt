@@ -206,6 +206,9 @@ C_true  = 1.00e-06
 
 → erreur ≈ 54.7 %
 
+
+
+
 Inverse Neural Network
 (torch_gpu) xxxx@TeyteyCase:/mnt/c/Users/theod/OneDrive/Documents/ULB/Ma2/TFE/AI-Assisted_Implementation_of_a_Digital-Twin/Digital_Twin_Calibration$ python3 inference.py --checkpoint ./src/dtcalib/deep_learning/models/cnn_2026-03-23_13-00-46_best.pth --root-dir ./data/ALL_LP_DATASETS_CSV_Deep_learning --split-j
 son ./src/dtcalib/deep_learning/splits/rc_nested_fold0.json
@@ -274,3 +277,58 @@ n_train=3200 | n_val=799 | n_test=1000
 
 [5] CSV saved (sample-level)   : src/dtcalib/deep_learning/models/prob_cnn_2026-03-23_11-33-12_best_test_predictions_per_sample.csv
 [5] CSV saved (capacity-level) : src/dtcalib/deep_learning/models/prob_cnn_2026-03-23_11-33-12_best_test_predictions_per_capacity_mean.csv
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+(torch_gpu) xxxx@TeyteyCase:/mnt/c/Users/theod/OneDrive/Documents/ULB/Ma2/TFE/AI-Assisted_Implementation_of_a_Digital-Twin/Digital_Twin_Calibration/src/dtcalib/deep_learning$ python3 inference.py   --checkpoint models/cnn_2026-04-23_14-57-22_best.pth   --root-dir ../../../data/LP_DATASET_R1_R2_C   --split-json ./splits/rc_r1r2c_nested_fold0.json   
+--device cuda   --aggregate mean
+Checkpoint : models/cnn_2026-04-23_14-57-22_best.pth
+Root dir   : ../../../data/LP_DATASET_R1_R2_C
+Split JSON : splits/rc_r1r2c_nested_fold0.json
+Device     : cuda
+Aggregate  : mean
+Calibrated params : ('C',)
+Transform map     : {'C': 'log'}
+n_train=25600 | n_val=6400 | n_test=8000
+
+[1] Sample-level metrics
+- C:
+    RMSE = 4.376477e-07
+    MAE  = 3.431298e-07
+    MAPE = 22.372 %
+
+[2] Aggregated metrics by true parameter combination
+- Aggregation = mean
+- #groups     = 10
+- C:
+    RMSE = 2.653071e-07
+    MAE  = 2.203783e-07
+    MAPE = 14.289 %
+
+[3] Sample-level prediction summary
+- C:
+    true min/max/mean/std = 8.000000e-07 / 3.200000e-06 / 1.681413e-06 / 7.174227e-07
+    pred min/max/mean/std = 8.164454e-07 / 3.305542e-06 / 1.683994e-06 / 6.015122e-07
+
+[4] Aggregated prediction summary
+- C:
+    true min/max/mean/std = 8.000000e-07 / 3.200000e-06 / 1.761190e-06 / 7.635687e-07
+    pred min/max/mean/std = 1.062437e-06 / 2.636516e-06 / 1.737043e-06 / 5.067887e-07
+
+[5] CSV saved (sample-level) : models/cnn_2026-04-23_14-57-22_best_test_predictions_per_sample.csv
+[5] CSV saved (group-level)  : models/cnn_2026-04-23_14-57-22_best_test_predictions_per_group_mean.csv

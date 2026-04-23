@@ -182,3 +182,75 @@ CV summary: {'rmse_mean': 0.13214718932390232, 'rmse_std': 0.06846348957614129, 
 [held-out=dataset_+c_1p0032em06__exp_lp_004_f0p574878hz__results_lp_004_f0p574878hz] theta_hat=[5.72779194e+03 5.50272978e+03 1.48897147e-06] rmse=0.245195 nmse=0.019293
 [held-out=dataset_+c_1p0032em06__exp_lp_005_f0p602252hz__results_lp_005_f0p602252hz] theta_hat=[5.72437696e+03 5.49943537e+03 1.48986054e-06] rmse=0.243706 nmse=0.0190601
 [held-out=dataset_+c_1p0032em06__exp_lp_006_f0p630928hz__results_lp_006_f0p630928hz] theta_hat=[5.26912840e+03 5.06206021e+03 1.61858902e-06] rmse=0.242149 nmse=0.0188179
+
+
+
+
+
+
+
+
+
+
+
+(torch_gpu) xxxx@TeyteyCase:/mnt/c/Users/theod/OneDrive/Documents/ULB/Ma2/TFE/AI-Assisted_Implementation_of_a_Digital-Twin/Digital_Twin_Calibration/src/dtcalib/deep_learning$ python3 inference.py   --checkpoint models/cnn_2026-04-23_14-14-14_best.pth   --root-dir ../../../data/LP_DATASET_R1_R2_C   --split-json ./splits/rc_r1r2c_nested_fold0.json   --device cuda   --aggregate mean
+Checkpoint : models/cnn_2026-04-23_14-14-14_best.pth
+Root dir   : ../../../data/LP_DATASET_R1_R2_C
+Split JSON : splits/rc_r1r2c_nested_fold0.json
+Device     : cuda
+Aggregate  : mean
+Calibrated params : ('R1', 'R2', 'C')
+Transform map     : {'R1': 'log', 'R2': 'log', 'C': 'log'}
+n_train=25600 | n_val=6400 | n_test=8000
+
+[1] Sample-level metrics
+- R1:
+    RMSE = 3.143698e+03
+    MAE  = 2.335968e+03
+    MAPE = 20.804 %
+- R2:
+    RMSE = 3.068142e+03
+    MAE  = 2.279977e+03
+    MAPE = 20.526 %
+- C:
+    RMSE = 4.350499e-07
+    MAE  = 3.419513e-07
+    MAPE = 22.569 %
+
+[2] Aggregated metrics by true parameter combination
+- Aggregation = mean
+- #groups     = 200
+- R1:
+    RMSE = 3.141285e+03
+    MAE  = 2.334750e+03
+    MAPE = 20.791 %
+- R2:
+    RMSE = 3.065413e+03
+    MAE  = 2.274978e+03
+    MAPE = 20.473 %
+- C:
+    RMSE = 4.342208e-07
+    MAE  = 3.408820e-07
+    MAPE = 22.497 %
+
+[3] Sample-level prediction summary
+- R1:
+    true min/max/mean/std = 5.000000e+03 / 2.000000e+04 / 1.135869e+04 / 5.065834e+03
+    pred min/max/mean/std = 5.154157e+03 / 1.987070e+04 / 1.053064e+04 / 3.661944e+03
+- R2:
+    true min/max/mean/std = 5.000000e+03 / 2.000000e+04 / 1.117958e+04 / 4.818882e+03
+    pred min/max/mean/std = 4.747471e+03 / 2.067798e+04 / 1.044145e+04 / 3.642078e+03
+- C:
+    true min/max/mean/std = 8.000000e-07 / 3.200000e-06 / 1.681413e-06 / 7.174227e-07
+    pred min/max/mean/std = 8.528453e-07 / 3.336717e-06 / 1.703683e-06 / 5.960635e-07
+
+[4] Aggregated prediction summary
+- R1:
+    true min/max/mean/std = 5.000000e+03 / 2.000000e+04 / 1.135869e+04 / 5.065834e+03
+    pred min/max/mean/std = 5.257604e+03 / 1.950814e+04 / 1.053064e+04 / 3.659873e+03
+- R2:
+    true min/max/mean/std = 5.000000e+03 / 2.000000e+04 / 1.117958e+04 / 4.818882e+03
+    pred min/max/mean/std = 5.064544e+03 / 1.982722e+04 / 1.044145e+04 / 3.639779e+03
+- C:
+    true min/max/mean/std = 8.000000e-07 / 3.200000e-06 / 1.681413e-06 / 7.174227e-07
+    pred min/max/mean/std = 8.755807e-07 / 3.264006e-06 / 1.703683e-06 / 5.954587e-07
