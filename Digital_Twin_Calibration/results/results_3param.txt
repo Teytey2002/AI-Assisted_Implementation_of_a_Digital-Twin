@@ -323,3 +323,73 @@ n_train=25600 | n_val=6400 | n_test=8000
 
 [5] CSV saved (sample-level) : models/mlp_2026-04-27_10-44-59_best_test_predictions_per_sample.csv
 [5] CSV saved (group-level)  : models/mlp_2026-04-27_10-44-59_best_test_predictions_per_group_mean.csv
+
+
+
+
+(Times series)
+(torch_gpu) xxxx@TeyteyCase:/mnt/c/Users/theod/OneDrive/Documents/ULB/Ma2/TFE/AI-Assisted_Implementation_of_a_Digital-Twin/Digital_Twin_Calibration/src/dtcalib/deep_learning$ python3 inference.py   --checkpoint models/prob_cnn_2026-04-27_11-14-50_best.pth   --root-dir ../../../data/LP_DATASET_R1_R2_C   --split-json ./splits/rc_r1r2c_nested_fold0.js
+on   --device cuda   --aggregate mean
+Checkpoint : models/prob_cnn_2026-04-27_11-14-50_best.pth
+Root dir   : ../../../data/LP_DATASET_R1_R2_C
+Split JSON : splits/rc_r1r2c_nested_fold0.json
+Device     : cuda
+Aggregate  : mean
+Calibrated params : ('R1', 'R2', 'C')
+Transform map     : {'R1': 'log', 'R2': 'log', 'C': 'log'}
+n_train=25600 | n_val=6400 | n_test=8000
+
+[1] Sample-level metrics
+- R1:
+    RMSE = 3.166809e+03
+    MAE  = 2.367956e+03
+    MAPE = 21.198 %
+- R2:
+    RMSE = 3.034095e+03
+    MAE  = 2.271172e+03
+    MAPE = 20.800 %
+- C:
+    RMSE = 4.360475e-07
+    MAE  = 3.420350e-07
+    MAPE = 22.612 %
+
+[2] Aggregated metrics by true parameter combination
+- Aggregation = mean
+- #groups     = 200
+- R1:
+    RMSE = 3.163774e+03
+    MAE  = 2.364954e+03
+    MAPE = 21.165 %
+- R2:
+    RMSE = 3.028515e+03
+    MAE  = 2.266052e+03
+    MAPE = 20.763 %
+- C:
+    RMSE = 4.350728e-07
+    MAE  = 3.411946e-07
+    MAPE = 22.553 %
+
+[3] Sample-level prediction summary
+- R1:
+    true min/max/mean/std = 5.000000e+03 / 2.000000e+04 / 1.135869e+04 / 5.065834e+03
+    pred min/max/mean/std = 5.291784e+03 / 1.921488e+04 / 1.050722e+04 / 3.448300e+03
+- R2:
+    true min/max/mean/std = 5.000000e+03 / 2.000000e+04 / 1.117958e+04 / 4.818882e+03
+    pred min/max/mean/std = 5.158046e+03 / 2.157229e+04 / 1.059994e+04 / 3.660020e+03
+- C:
+    true min/max/mean/std = 8.000000e-07 / 3.200000e-06 / 1.681413e-06 / 7.174227e-07
+    pred min/max/mean/std = 8.452333e-07 / 3.157164e-06 / 1.686389e-06 / 5.589049e-07
+
+[4] Aggregated prediction summary
+- R1:
+    true min/max/mean/std = 5.000000e+03 / 2.000000e+04 / 1.135869e+04 / 5.065834e+03
+    pred min/max/mean/std = 5.468072e+03 / 1.845632e+04 / 1.050722e+04 / 3.445513e+03
+- R2:
+    true min/max/mean/std = 5.000000e+03 / 2.000000e+04 / 1.117958e+04 / 4.818882e+03
+    pred min/max/mean/std = 5.309233e+03 / 2.039313e+04 / 1.059994e+04 / 3.655396e+03
+- C:
+    true min/max/mean/std = 8.000000e-07 / 3.200000e-06 / 1.681413e-06 / 7.174227e-07
+    pred min/max/mean/std = 8.810174e-07 / 3.073874e-06 / 1.686389e-06 / 5.581448e-07
+
+[5] CSV saved (sample-level) : models/prob_cnn_2026-04-27_11-14-50_best_test_predictions_per_sample.csv
+[5] CSV saved (group-level)  : models/prob_cnn_2026-04-27_11-14-50_best_test_predictions_per_group_mean.csv

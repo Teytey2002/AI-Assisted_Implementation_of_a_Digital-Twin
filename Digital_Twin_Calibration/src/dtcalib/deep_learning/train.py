@@ -137,7 +137,7 @@ def train(
     # -------------------------
     # Dataset
     # -------------------------
-    dataset = RCSignalDataset(dataset_root, target_spec=target_spec, manifest_name="manifest.csv", domain="fft")
+    dataset = RCSignalDataset(dataset_root, target_spec=target_spec, manifest_name="manifest.csv", domain="time")
 
     payload = load_split(split_json_path)
     train_idx, val_idx, test_idx = get_indices(payload)
