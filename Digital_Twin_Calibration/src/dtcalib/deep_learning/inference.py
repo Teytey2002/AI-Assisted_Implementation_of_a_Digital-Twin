@@ -95,6 +95,14 @@ def run_inference(
         root_dir,
         target_spec=target_spec,
         manifest_name=manifest_name,
+        domain="fft",
+    )
+
+    dataset.set_normalization(
+        calibrator.stats.x_mean.cpu(),
+        calibrator.stats.x_std.cpu(),
+        calibrator.stats.y_mean.cpu(),
+        calibrator.stats.y_std.cpu(),
     )
 
     # ------------------------------------------------------------------
@@ -116,23 +124,22 @@ def run_inference(
     for idx in test_idx:
         csv_path, param_dict = dataset.samples[idx]
 
-        df = pd.read_csv(csv_path)
-        time = df.iloc[:, 0].values.astype(np.float32)
-        vin = df.iloc[:, 1].values.astype(np.float32)
-        vout = df.iloc[:, 2].values.astype(np.float32)
+        x, _ = dataset[idx]
+        x = x.unsqueeze(0).to(device_t)  # [1, 3] or [1, 3, 1]
 
-        pred_vec: np.ndarray
-        pred_std_vec: np.ndarray | None = None
+        with torch.no_grad():
+            out = calibrator.model(x)
 
-        # Probabilistic model -> mean + std
-        # Deterministic model -> mean only
-        try:
-            pred_vec, pred_std_vec = calibrator.predict_distribution(time, vin, vout)
-        except TypeError:
-            pred_vec = calibrator.predict(time, vin, vout)
-            pred_std_vec = None
+            if isinstance(out, tuple):
+                y_norm = out[0]
+                pred_std_vec = None
+            else:
+                y_norm = out
+                pred_std_vec = None
 
-        pred_vec = np.asarray(pred_vec, dtype=np.float64)
+            y_phys = calibrator.stats.y_norm_to_physical(y_norm)
+
+        pred_vec = y_phys.squeeze(0).detach().cpu().numpy().astype(np.float64)
         if pred_vec.ndim != 1 or pred_vec.shape[0] != len(calibrated_params):
             raise ValueError(
                 f"Expected prediction vector of shape ({len(calibrated_params)},), "

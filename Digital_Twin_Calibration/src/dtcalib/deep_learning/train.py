@@ -17,7 +17,7 @@ import torch.optim as optim
 from torch.utils.data import DataLoader, Subset
 from torch.utils.tensorboard import SummaryWriter
 
-from model import RCInverseCNN, ProbabilisticRCInverseCNN
+from model import RCInverseCNN, ProbabilisticRCInverseCNN, RCInverseMLP
 from dataset import RCSignalDataset, TargetSpec
 from dtcalib.deep_learning.splits_utils import load_split, get_indices
 from dtcalib.calibration import NormalizationStats
@@ -56,12 +56,6 @@ def gaussian_nll_loss(
 # Model factory
 # ------------------------------------------------------------
 def build_model(model_name: str, output_dim: int) -> tuple[nn.Module, str, str]:
-    """
-    Returns:
-        model
-        model_mode: 'deterministic' or 'probabilistic'
-        model_class_name: name saved in checkpoint
-    """
     model_name = model_name.lower()
 
     if model_name == "cnn":
@@ -70,8 +64,11 @@ def build_model(model_name: str, output_dim: int) -> tuple[nn.Module, str, str]:
     if model_name == "prob_cnn":
         return ProbabilisticRCInverseCNN(output_dim=output_dim), "probabilistic", "ProbabilisticRCInverseCNN"
 
+    if model_name == "mlp":
+        return RCInverseMLP(input_dim=24, output_dim=output_dim), "deterministic", "RCInverseMLP"
+
     raise ValueError(
-        f"Unknown model '{model_name}'. Supported values: 'cnn', 'prob_cnn'."
+        f"Unknown model '{model_name}'. Supported values: 'cnn', 'prob_cnn', 'mlp'."
     )
 
 
@@ -128,10 +125,10 @@ def train(
     max_epochs = 300
 
     # Modified if needed to train the model to predict differents number of parameters
-    #calibrated_params = ("R1", "R2", "C")
-    #transform_map = {"R1": "log", "R2": "log", "C": "log"}
-    calibrated_params = ("R2", "C")
-    transform_map = {"R2": "log", "C": "log"}
+    calibrated_params = ("R1", "R2", "C")
+    transform_map = {"R1": "log", "R2": "log", "C": "log"}
+    #calibrated_params = ("R2", "C")
+    #transform_map = {"R2": "log", "C": "log"}
     #calibrated_params = ("C",)
     #transform_map = {"C": "log"}
     target_spec = TargetSpec(calibrated_params=calibrated_params, transform_map=transform_map)
@@ -140,7 +137,7 @@ def train(
     # -------------------------
     # Dataset
     # -------------------------
-    dataset = RCSignalDataset(dataset_root, target_spec=target_spec, manifest_name="manifest.csv")
+    dataset = RCSignalDataset(dataset_root, target_spec=target_spec, manifest_name="manifest.csv", domain="fft")
 
     payload = load_split(split_json_path)
     train_idx, val_idx, test_idx = get_indices(payload)
@@ -376,7 +373,7 @@ def parse_args() -> argparse.Namespace:
         "--model",
         type=str,
         required=True,
-        choices=["cnn", "prob_cnn"],
+        choices=["cnn", "prob_cnn", "mlp"],
         help="Model to train",
     )
     return parser.parse_args()

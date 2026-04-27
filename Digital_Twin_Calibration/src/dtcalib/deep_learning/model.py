@@ -3,6 +3,50 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+class RCInverseMLP(nn.Module):
+    """
+    MLP for compact inverse parameter estimation.
+
+    Input expected:
+        x: [batch, 3, 1] or [batch, 3]
+
+    Example FFT features:
+        [frequency, gain, phase] -> parameters
+    """
+
+    def __init__(
+        self,
+        input_dim: int = 3,
+        output_dim: int = 1,
+        hidden_dims: tuple[int, ...] = (64, 64, 32),
+        dropout_p: float = 0.1,
+    ):
+        super().__init__()
+
+        self.input_dim = int(input_dim)
+        self.output_dim = int(output_dim)
+
+        layers = []
+        prev_dim = self.input_dim
+
+        for h in hidden_dims:
+            layers.append(nn.Linear(prev_dim, h))
+            layers.append(nn.ReLU())
+            layers.append(nn.Dropout(dropout_p))
+            prev_dim = h
+
+        layers.append(nn.Linear(prev_dim, self.output_dim))
+
+        self.net = nn.Sequential(*layers)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        if x.ndim == 3:
+            x = torch.flatten(x, start_dim=1)
+
+        if x.ndim != 2:
+            raise ValueError(f"Expected x shape [B, F] or [B, 3, T], got {x.shape}")
+
+        return self.net(x)
 
 class RCInverseCNN(nn.Module):
     """

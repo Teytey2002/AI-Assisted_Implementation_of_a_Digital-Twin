@@ -13,7 +13,7 @@ from .metrics import Metrics, MetricsResult
 from pathlib import Path
 import torch
 
-from dtcalib.deep_learning.model import RCInverseCNN, ProbabilisticRCInverseCNN
+from dtcalib.deep_learning.model import RCInverseCNN, ProbabilisticRCInverseCNN, RCInverseMLP
 
 
 @dataclass(frozen=True)
@@ -873,8 +873,13 @@ class RCNeuralCalibrator:
 
         if model_class == "RCInverseCNN":
             model = RCInverseCNN(output_dim=output_dim)
+
         elif model_class == "ProbabilisticRCInverseCNN":
             model = ProbabilisticRCInverseCNN(output_dim=output_dim)
+
+        elif model_class == "RCInverseMLP":
+            model = RCInverseMLP(input_dim=24, output_dim=output_dim)
+
         else:
             raise ValueError(f"Unsupported model_class in checkpoint: {model_class}")
 

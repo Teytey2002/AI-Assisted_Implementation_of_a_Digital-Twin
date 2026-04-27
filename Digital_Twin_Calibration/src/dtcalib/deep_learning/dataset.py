@@ -3,7 +3,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Sequence, Optional, Any
-import re
 
 import numpy as np
 import pandas as pd
@@ -83,6 +82,7 @@ class RCSignalDataset(Dataset):
         *,
         target_spec: TargetSpec,
         manifest_name: str = "manifest.csv",
+        domain: str = "time",
     ):
         self.root_dir = Path(root_dir)
         self.target_spec = target_spec
@@ -97,6 +97,9 @@ class RCSignalDataset(Dataset):
         self.y_std: Optional[torch.Tensor] = None    # [d]
 
         self._build_index_from_manifest()
+        self.domain = domain
+        if self.domain not in {"time", "fft"}:
+            raise ValueError("domain must be either 'time' or 'fft'.")
 
     def _build_index_from_manifest(self) -> None:
         if not self.root_dir.exists():
@@ -160,7 +163,10 @@ class RCSignalDataset(Dataset):
             vin = df.iloc[:, 1].values
             vout = df.iloc[:, 2].values
 
-            x = np.stack([time, vin, vout], axis=0)            # [3, T]
+            if self.domain == "time":
+                x = np.stack([time, vin, vout], axis=0)
+            else:
+                x = self._build_fft_features(time, vin, vout)
             y = self.target_spec.transform_vector(param_dict)  # [d]
 
             xs.append(x)
@@ -174,6 +180,29 @@ class RCSignalDataset(Dataset):
 
         self.y_mean = torch.tensor(ys.mean(axis=0), dtype=torch.float32)
         self.y_std = torch.tensor(ys.std(axis=0) + 1e-8, dtype=torch.float32)
+    
+    def _build_fft_features(self, time, vin, vout):
+        dt = float(np.mean(np.diff(time)))
+        n = len(time)
+
+        freqs = np.fft.rfftfreq(n, d=dt)
+        U = np.fft.rfft(vin)
+        Y = np.fft.rfft(vout)
+
+        amp_u = np.abs(U)
+        amp_u[0] = 0.0  # remove DC
+
+        top_k = 8
+        idxs = np.argsort(amp_u)[-top_k:]
+        idxs = idxs[np.argsort(freqs[idxs])]
+
+        H = Y[idxs] / (U[idxs] + 1e-12)
+
+        f = np.log1p(freqs[idxs])
+        mag = np.log1p(np.abs(H))
+        phase = np.angle(H)
+
+        return np.stack([f, mag, phase], axis=0).astype(np.float32)
 
     def __getitem__(self, idx: int):
         csv_path, param_dict = self.samples[idx]
@@ -181,17 +210,23 @@ class RCSignalDataset(Dataset):
         if csv_path not in self.cache:
             df = pd.read_csv(csv_path)
 
-            time = torch.tensor(df.iloc[:, 0].values, dtype=torch.float32)
-            vin = torch.tensor(df.iloc[:, 1].values, dtype=torch.float32)
-            vout = torch.tensor(df.iloc[:, 2].values, dtype=torch.float32)
+            time = df.iloc[:, 0].values.astype(np.float32)
+            vin  = df.iloc[:, 1].values.astype(np.float32)
+            vout = df.iloc[:, 2].values.astype(np.float32)
 
             self.cache[csv_path] = (time, vin, vout)
 
         time, vin, vout = self.cache[csv_path]
-        x = torch.stack([time, vin, vout], dim=0)  # [3, T]
+
+        if self.domain == "time":
+            x_np = np.stack([time, vin, vout], axis=0)
+        else:
+            x_np = self._build_fft_features(time, vin, vout)
+
+        x = torch.tensor(x_np, dtype=torch.float32)
 
         y_np = self.target_spec.transform_vector(param_dict)
-        y = torch.tensor(y_np, dtype=torch.float32)  # [d]
+        y = torch.tensor(y_np, dtype=torch.float32)
 
         if self.x_mean is not None:
             x = (x - self.x_mean[:, None]) / self.x_std[:, None]

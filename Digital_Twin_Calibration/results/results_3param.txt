@@ -192,7 +192,7 @@ CV summary: {'rmse_mean': 0.13214718932390232, 'rmse_std': 0.06846348957614129, 
 
 
 
-
+(Serié templorelles)
 (torch_gpu) xxxx@TeyteyCase:/mnt/c/Users/theod/OneDrive/Documents/ULB/Ma2/TFE/AI-Assisted_Implementation_of_a_Digital-Twin/Digital_Twin_Calibration/src/dtcalib/deep_learning$ python3 inference.py   --checkpoint models/cnn_2026-04-23_14-14-14_best.pth   --root-dir ../../../data/LP_DATASET_R1_R2_C   --split-json ./splits/rc_r1r2c_nested_fold0.json   --device cuda   --aggregate mean
 Checkpoint : models/cnn_2026-04-23_14-14-14_best.pth
 Root dir   : ../../../data/LP_DATASET_R1_R2_C
@@ -254,3 +254,72 @@ n_train=25600 | n_val=6400 | n_test=8000
 - C:
     true min/max/mean/std = 8.000000e-07 / 3.200000e-06 / 1.681413e-06 / 7.174227e-07
     pred min/max/mean/std = 8.755807e-07 / 3.264006e-06 / 1.703683e-06 / 5.954587e-07
+
+
+
+
+(FFT)
+(torch_gpu) xxxx@TeyteyCase:/mnt/c/Users/theod/OneDrive/Documents/ULB/Ma2/TFE/AI-Assisted_Implementation_of_a_Digital-Twin/Digital_Twin_Calibration/src/dtcalib/deep_learning$ python3 inference.py   --checkpoint models/mlp_2026-04-27_10-44-59_best.pth   --root-dir ../../../data/LP_DATASET_R1_R2_C   --split-json ./splits/rc_r1r2c_nested_fold0.json   --device cuda   --aggregate mean
+Checkpoint : models/mlp_2026-04-27_10-44-59_best.pth
+Root dir   : ../../../data/LP_DATASET_R1_R2_C
+Split JSON : splits/rc_r1r2c_nested_fold0.json
+Device     : cuda
+Aggregate  : mean
+Calibrated params : ('R1', 'R2', 'C')
+Transform map     : {'R1': 'log', 'R2': 'log', 'C': 'log'}
+n_train=25600 | n_val=6400 | n_test=8000
+
+[1] Sample-level metrics
+- R1:
+    RMSE = 3.156415e+03
+    MAE  = 2.361966e+03
+    MAPE = 21.163 %
+- R2:
+    RMSE = 3.144990e+03
+    MAE  = 2.346833e+03
+    MAPE = 20.906 %
+- C:
+    RMSE = 4.377674e-07
+    MAE  = 3.438682e-07
+    MAPE = 22.509 %
+
+[2] Aggregated metrics by true parameter combination
+- Aggregation = mean
+- #groups     = 200
+- R1:
+    RMSE = 3.152091e+03
+    MAE  = 2.359262e+03
+    MAPE = 21.142 %
+- R2:
+    RMSE = 3.139216e+03
+    MAE  = 2.340690e+03
+    MAPE = 20.855 %
+- C:
+    RMSE = 4.370959e-07
+    MAE  = 3.431272e-07
+    MAPE = 22.461 %
+
+[3] Sample-level prediction summary
+- R1:
+    true min/max/mean/std = 5.000000e+03 / 2.000000e+04 / 1.135869e+04 / 5.065834e+03
+    pred min/max/mean/std = 5.276893e+03 / 1.916979e+04 / 1.056322e+04 / 3.597544e+03
+- R2:
+    true min/max/mean/std = 5.000000e+03 / 2.000000e+04 / 1.117958e+04 / 4.818882e+03
+    pred min/max/mean/std = 4.990675e+03 / 1.913517e+04 / 1.029904e+04 / 3.458676e+03
+- C:
+    true min/max/mean/std = 8.000000e-07 / 3.200000e-06 / 1.681413e-06 / 7.174227e-07
+    pred min/max/mean/std = 7.910605e-07 / 3.133100e-06 / 1.678367e-06 / 5.787549e-07
+
+[4] Aggregated prediction summary
+- R1:
+    true min/max/mean/std = 5.000000e+03 / 2.000000e+04 / 1.135869e+04 / 5.065834e+03
+    pred min/max/mean/std = 5.486367e+03 / 1.813469e+04 / 1.056322e+04 / 3.593751e+03
+- R2:
+    true min/max/mean/std = 5.000000e+03 / 2.000000e+04 / 1.117958e+04 / 4.818882e+03
+    pred min/max/mean/std = 5.269307e+03 / 1.863262e+04 / 1.029904e+04 / 3.453427e+03
+- C:
+    true min/max/mean/std = 8.000000e-07 / 3.200000e-06 / 1.681413e-06 / 7.174227e-07
+    pred min/max/mean/std = 8.186659e-07 / 3.013392e-06 / 1.678367e-06 / 5.782471e-07
+
+[5] CSV saved (sample-level) : models/mlp_2026-04-27_10-44-59_best_test_predictions_per_sample.csv
+[5] CSV saved (group-level)  : models/mlp_2026-04-27_10-44-59_best_test_predictions_per_group_mean.csv
