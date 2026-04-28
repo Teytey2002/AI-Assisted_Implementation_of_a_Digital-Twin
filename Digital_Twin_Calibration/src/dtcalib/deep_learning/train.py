@@ -1,6 +1,6 @@
 """
 Example of usage from deep_learning directory: 
-    python3 train.py --dataset ../../../data/ALL_LP_DATASETS_CSV_Deep_learning --split ./splits/rc_nested_fold0.json --model prob_cnn
+    python3 train.py --dataset ../../../data/LP_DATASET_R1_R2_C --split ./splits/rc_r1r2c_nested_fold0.json --model prob_cnn
 """
 from __future__ import annotations
 import os
@@ -137,7 +137,7 @@ def train(
     # -------------------------
     # Dataset
     # -------------------------
-    dataset = RCSignalDataset(dataset_root, target_spec=target_spec, manifest_name="manifest.csv", domain="time")
+    dataset = RCSignalDataset(dataset_root, target_spec=target_spec, manifest_name="manifest.csv", domain="fft")
 
     payload = load_split(split_json_path)
     train_idx, val_idx, test_idx = get_indices(payload)

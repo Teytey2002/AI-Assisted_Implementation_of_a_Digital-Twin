@@ -785,6 +785,13 @@ class ParticleSwarmCalibrator:
 # -----------------------------------------------------------
 # ------------- Deep learning Calibration -------------------
 # -----------------------------------------------------------
+@dataclass(frozen=True)
+class NeuralPredictionResult:
+    mean_physical: np.ndarray              # [B, d]
+    std_physical: Optional[np.ndarray]     # [B, d]
+    samples_physical: Optional[np.ndarray] # [B, S, d]
+    mean_norm: np.ndarray                  # [B, d]
+    std_norm: Optional[np.ndarray]         # [B, d]
 
 @dataclass(frozen=True)
 class NormalizationStats:
@@ -878,7 +885,9 @@ class RCNeuralCalibrator:
             model = ProbabilisticRCInverseCNN(output_dim=output_dim)
 
         elif model_class == "RCInverseMLP":
-            model = RCInverseMLP(input_dim=24, output_dim=output_dim)
+            state = ckpt["model_state_dict"]
+            input_dim = int(state["net.0.weight"].shape[1])
+            model = RCInverseMLP(input_dim=input_dim, output_dim=output_dim)
 
         else:
             raise ValueError(f"Unsupported model_class in checkpoint: {model_class}")
@@ -1000,3 +1009,94 @@ class RCNeuralCalibrator:
 
         y_phys = self.stats.y_norm_to_physical(y_norm).squeeze(0)  # [d]
         return y_phys.detach().cpu().numpy().astype(float)
+    
+    def predict_from_x(
+        self,
+        x: torch.Tensor,
+        *,
+        n_samples: int = 0,
+    ) -> NeuralPredictionResult:
+        """
+        Predict from an already preprocessed/normalized dataset tensor.
+
+        x:
+        [3, T] or [B, 3, T]
+
+        Works for:
+        - deterministic CNN
+        - deterministic MLP
+        - probabilistic CNN
+        """
+        self.model.eval()
+
+        if x.ndim == 2:
+            x = x.unsqueeze(0)
+
+        if x.ndim != 3:
+            raise ValueError(f"Expected x shape [3,T] or [B,3,T], got {tuple(x.shape)}")
+
+        x = x.to(self.device).float()
+
+        with torch.no_grad():
+            out = self.model(x)
+
+            if isinstance(out, tuple):
+                mu_norm, log_var_norm = out
+                std_norm = torch.sqrt(torch.exp(log_var_norm) + 1e-8)
+            else:
+                mu_norm = out
+                std_norm = None
+
+            mean_physical_t = self.stats.y_norm_to_physical(mu_norm)
+
+            samples_physical_t = None
+            if std_norm is not None and n_samples > 0:
+                eps = torch.randn(
+                    mu_norm.shape[0],
+                    int(n_samples),
+                    mu_norm.shape[1],
+                    device=self.device,
+                )
+                y_samples_norm = mu_norm[:, None, :] + std_norm[:, None, :] * eps
+                samples_physical_t = self.stats.y_norm_to_physical(y_samples_norm)
+
+        mean_physical = mean_physical_t.detach().cpu().numpy().astype(float)
+        mean_norm = mu_norm.detach().cpu().numpy().astype(float)
+
+        if std_norm is None:
+            std_norm_np = None
+            std_physical_np = None
+        else:
+            std_norm_np = std_norm.detach().cpu().numpy().astype(float)
+
+            if samples_physical_t is not None:
+                std_physical_np = (
+                    samples_physical_t.std(dim=1)
+                    .detach()
+                    .cpu()
+                    .numpy()
+                    .astype(float)
+                )
+            else:
+                # Delta-method approximation if no sampling requested.
+                y_transformed = self.stats.denormalize_y(mu_norm)
+                std_transformed = std_norm * self.stats.y_std[None, :]
+
+                std_phys = std_transformed.clone()
+                for i, p in enumerate(self.stats.calibrated_params):
+                    if self.stats.transform_map.get(p, "identity") == "log":
+                        std_phys[:, i] = torch.exp(y_transformed[:, i]) * std_transformed[:, i]
+
+                std_physical_np = std_phys.detach().cpu().numpy().astype(float)
+
+        samples_physical_np = None
+        if samples_physical_t is not None:
+            samples_physical_np = samples_physical_t.detach().cpu().numpy().astype(float)
+
+        return NeuralPredictionResult(
+            mean_physical=mean_physical,
+            std_physical=std_physical_np,
+            samples_physical=samples_physical_np,
+            mean_norm=mean_norm,
+            std_norm=std_norm_np,
+        )

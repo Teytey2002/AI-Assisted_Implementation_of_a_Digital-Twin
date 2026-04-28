@@ -8,6 +8,17 @@ python3 inference.py \
   --split-json ./splits/rc_r1r2c_nested_fold0.json \
   --device cuda \
   --aggregate mean
+
+  Hybrid version with physics-based selection among sampled candidates:
+  python3 inference.py \
+  --checkpoint models/prob_cnn_2026-04-27_11-14-50_best.pth \
+  --root-dir ../../../data/LP_DATASET_R1_R2_C \
+  --split-json ./splits/rc_r1r2c_nested_fold0.json \
+  --device cuda \
+  --aggregate mean \
+  --n-samples 200 \
+  --hybrid-select \
+  --hybrid-n-candidates 100
 """
 
 from __future__ import annotations
@@ -16,29 +27,16 @@ import argparse
 from pathlib import Path
 from typing import Any
 
+from dtcalib import metrics
 import numpy as np
 import pandas as pd
 import torch
 
 from dtcalib.calibration import RCNeuralCalibrator
+from dtcalib.simulation import LowPassR1CR2Simulator
 from dtcalib.deep_learning.dataset import RCSignalDataset, TargetSpec
 from dtcalib.deep_learning.splits_utils import load_split, get_indices
-
-
-# ---------------------------------------------------------------------
-# Metrics
-# ---------------------------------------------------------------------
-def rmse(y_true: np.ndarray, y_pred: np.ndarray) -> float:
-    return float(np.sqrt(np.mean((y_true - y_pred) ** 2)))
-
-
-def mae(y_true: np.ndarray, y_pred: np.ndarray) -> float:
-    return float(np.mean(np.abs(y_true - y_pred)))
-
-
-def mape_percent(y_true: np.ndarray, y_pred: np.ndarray, eps: float = 1e-12) -> float:
-    return float(np.mean(np.abs((y_pred - y_true) / (np.abs(y_true) + eps))) * 100.0)
-
+from dtcalib.metrics import Metrics
 
 def _aggregate_array(values: np.ndarray, mode: str) -> float:
     if mode == "mean":
@@ -59,6 +57,9 @@ def run_inference(
     aggregate: str = "mean",
     save_csv: bool = True,
     manifest_name: str = "manifest.csv",
+    n_samples: int = 0,
+    hybrid_select: bool = False,
+    hybrid_n_candidates: int = 100,
 ) -> None:
     checkpoint_path = Path(checkpoint_path)
     root_dir = Path(root_dir)
@@ -124,39 +125,75 @@ def run_inference(
     for idx in test_idx:
         csv_path, param_dict = dataset.samples[idx]
 
-        x, _ = dataset[idx]
-        x = x.unsqueeze(0).to(device_t)  # [1, 3] or [1, 3, 1]
+        x, y_norm_true = dataset[idx]
 
-        with torch.no_grad():
-            out = calibrator.model(x)
+        pred = calibrator.predict_from_x(
+            x,
+            n_samples=n_samples if n_samples > 0 else 0,
+        )
 
-            if isinstance(out, tuple):
-                y_norm = out[0]
-                pred_std_vec = None
-            else:
-                y_norm = out
-                pred_std_vec = None
+        pred_vec = pred.mean_physical.squeeze(0)
 
-            y_phys = calibrator.stats.y_norm_to_physical(y_norm)
+        samples_vec = None
+        if pred.samples_physical is not None:
+            samples_vec = pred.samples_physical.squeeze(0)  # [S, d]
 
-        pred_vec = y_phys.squeeze(0).detach().cpu().numpy().astype(np.float64)
-        if pred_vec.ndim != 1 or pred_vec.shape[0] != len(calibrated_params):
-            raise ValueError(
-                f"Expected prediction vector of shape ({len(calibrated_params)},), "
-                f"got {pred_vec.shape}."
+        selected_vec = None
+        selected_rmse = None
+
+        if hybrid_select and samples_vec is not None:
+            df_sig = pd.read_csv(csv_path)
+            time = df_sig.iloc[:, 0].to_numpy(dtype=np.float64)
+            vin = df_sig.iloc[:, 1].to_numpy(dtype=np.float64)
+            vout = df_sig.iloc[:, 2].to_numpy(dtype=np.float64)
+
+            fixed_params = {
+                p: float(param_dict[p])
+                for p in ("R1", "R2", "C")
+                if p not in calibrated_params
+            }
+
+            simulator = LowPassR1CR2Simulator(
+                calibrated_params=calibrated_params,
+                fixed_params=fixed_params,
+                y0_mode="dc_from_u0",
             )
 
-        if pred_std_vec is not None:
-            pred_std_vec = np.asarray(pred_std_vec, dtype=np.float64)
-            if pred_std_vec.shape != pred_vec.shape:
-                raise ValueError(
-                    f"pred_std_vec shape {pred_std_vec.shape} does not match pred_vec shape {pred_vec.shape}."
-                )
+            candidate_samples = samples_vec[: int(hybrid_n_candidates)]
+
+            best_score = float("inf")
+            best_theta = None
+
+            for theta_candidate in candidate_samples:
+                try:
+                    yhat = simulator.simulate(
+                        time,
+                        vin,
+                        np.asarray(theta_candidate, dtype=np.float64),
+                    ).y
+                    score = Metrics.rmse(vout, yhat)
+                except Exception:
+                    continue
+
+                if score < best_score:
+                    best_score = float(score)
+                    best_theta = np.asarray(theta_candidate, dtype=np.float64)
+
+            if best_theta is not None:
+                selected_vec = best_theta
+                selected_rmse = best_score
 
         row: dict[str, Any] = {
             "index": int(idx),
             "csv_path": str(csv_path),
         }
+
+        # Store normalized ground truth and normalized probabilistic outputs.
+        y_norm_true_np = y_norm_true.detach().cpu().numpy().astype(np.float64)
+        mu_norm_np = pred.mean_norm.squeeze(0).astype(np.float64)
+        std_norm_np = None
+        if pred.std_norm is not None:
+            std_norm_np = pred.std_norm.squeeze(0).astype(np.float64)
 
         for i, p in enumerate(calibrated_params):
             true_val = float(param_dict[p])
@@ -165,14 +202,44 @@ def run_inference(
             row[f"true_{p}"] = true_val
             row[f"pred_{p}"] = pred_val
             row[f"abs_error_{p}"] = float(abs(pred_val - true_val))
-            row[f"rel_error_percent_{p}"] = float(
-                abs(pred_val - true_val) / max(abs(true_val), 1e-30) * 100.0
-            )
+            row[f"rel_error_percent_{p}"] = float(abs(pred_val - true_val) / max(abs(true_val), 1e-30) * 100.0)
+            row[f"true_norm_{p}"] = float(y_norm_true_np[i])
+            row[f"pred_norm_{p}"] = float(mu_norm_np[i])
 
-            if pred_std_vec is not None:
-                row[f"pred_std_{p}"] = float(pred_std_vec[i])
+            if std_norm_np is not None:
+                row[f"pred_std_norm_{p}"] = float(std_norm_np[i])
+            else:
+                row[f"pred_std_norm_{p}"] = None
+
+            if pred.std_physical is not None:
+                row[f"pred_std_{p}"] = float(pred.std_physical.squeeze(0)[i])
             else:
                 row[f"pred_std_{p}"] = None
+
+            if selected_vec is not None:
+                selected_val = float(selected_vec[i])
+                row[f"selected_{p}"] = selected_val
+                row[f"selected_abs_error_{p}"] = float(abs(selected_val - true_val))
+                row[f"selected_rel_error_percent_{p}"] = float(abs(selected_val - true_val) / max(abs(true_val), 1e-30) * 100.0)
+            else:
+                row[f"selected_{p}"] = None
+                row[f"selected_abs_error_{p}"] = None
+                row[f"selected_rel_error_percent_{p}"] = None
+
+            if samples_vec is not None:
+                row[f"samples_mean_{p}"] = float(np.mean(samples_vec[:, i]))
+                row[f"samples_std_{p}"] = float(np.std(samples_vec[:, i]))
+                row[f"samples_q025_{p}"] = float(np.quantile(samples_vec[:, i], 0.025))
+                row[f"samples_q500_{p}"] = float(np.quantile(samples_vec[:, i], 0.500))
+                row[f"samples_q975_{p}"] = float(np.quantile(samples_vec[:, i], 0.975))
+            else:
+                row[f"samples_mean_{p}"] = None
+                row[f"samples_std_{p}"] = None
+                row[f"samples_q025_{p}"] = None
+                row[f"samples_q500_{p}"] = None
+                row[f"samples_q975_{p}"] = None
+
+        row["hybrid_selected_signal_rmse"] = selected_rmse
 
         rows.append(row)
 
@@ -187,9 +254,9 @@ def run_inference(
         y_pred = df_rows[f"pred_{p}"].to_numpy(dtype=np.float64)
 
         print(f"- {p}:")
-        print(f"    RMSE = {rmse(y_true, y_pred):.6e}")
-        print(f"    MAE  = {mae(y_true, y_pred):.6e}")
-        print(f"    MAPE = {mape_percent(y_true, y_pred):.3f} %")
+        print(f"    RMSE = {Metrics.rmse(y_true, y_pred):.6e}")
+        print(f"    MAE  = {Metrics.mae(y_true, y_pred):.6e}")
+        print(f"    MAPE = {Metrics.mape_percent(y_true, y_pred):.3f} %")
 
     # ------------------------------------------------------------------
     # [2] Aggregated evaluation by TRUE parameter combination
@@ -242,12 +309,82 @@ def run_inference(
         y_pred = df_grouped[f"pred_{p}_agg"].to_numpy(dtype=np.float64)
 
         print(f"- {p}:")
-        print(f"    RMSE = {rmse(y_true, y_pred):.6e}")
-        print(f"    MAE  = {mae(y_true, y_pred):.6e}")
-        print(f"    MAPE = {mape_percent(y_true, y_pred):.3f} %")
+        print(f"    RMSE = {Metrics.rmse(y_true, y_pred):.6e}")
+        print(f"    MAE  = {Metrics.mae(y_true, y_pred):.6e}")
+        print(f"    MAPE = {Metrics.mape_percent(y_true, y_pred):.3f} %")
+
+    
+    # ------------------------------------------------------------------
+    # [4] Probabilistic metrics (if available)
+    # ------------------------------------------------------------------
+    print("\n[Probabilistic evaluation]")
+
+    has_samples = n_samples > 0 and all(f"samples_q025_{p}" in df_rows.columns for p in calibrated_params)
+
+    for p in calibrated_params:
+        y_true = df_rows[f"true_{p}"].to_numpy(dtype=np.float64)
+        y_pred = df_rows[f"pred_{p}"].to_numpy(dtype=np.float64)
+
+        std_col = f"pred_std_{p}"
+        has_std = std_col in df_rows.columns and df_rows[std_col].notna().any()
+
+        print(f"- {p}:")
+
+        if has_std:
+            y_std = pd.to_numeric(df_rows[std_col], errors="coerce").to_numpy(dtype=np.float64)
+            mask = np.isfinite(y_std)
+
+            abs_err = np.abs(y_pred[mask] - y_true[mask])
+
+            print(f"    mean predicted std = {np.mean(y_std[mask]):.6e}")
+            print(f"    corr(abs_error, pred_std) = {Metrics.safe_corrcoef(abs_err, y_std[mask]):.4f}")
+
+        if has_samples:
+            q025 = pd.to_numeric(df_rows[f"samples_q025_{p}"], errors="coerce").to_numpy(dtype=np.float64)
+            q500 = pd.to_numeric(df_rows[f"samples_q500_{p}"], errors="coerce").to_numpy(dtype=np.float64)
+            q975 = pd.to_numeric(df_rows[f"samples_q975_{p}"], errors="coerce").to_numpy(dtype=np.float64)
+
+            covered_95 = np.mean((y_true >= q025) & (y_true <= q975))
+            width_95 = np.mean(q975 - q025)
+
+            print(f"    empirical 95% coverage = {covered_95:.3f}")
+            print(f"    mean 95% interval width = {width_95:.6e}")
+
+        # Gaussian NLL in normalized target space.
+        std_norm_col = f"pred_std_norm_{p}"
+        if std_norm_col in df_rows.columns and df_rows[std_norm_col].notna().any():
+            y_true_norm = df_rows[f"true_norm_{p}"].to_numpy(dtype=np.float64)
+            y_pred_norm = df_rows[f"pred_norm_{p}"].to_numpy(dtype=np.float64)
+            y_std_norm = pd.to_numeric(df_rows[std_norm_col], errors="coerce").to_numpy(dtype=np.float64)
+
+            mask = np.isfinite(y_std_norm)
+            print(
+                f"    Gaussian NLL norm = "
+                f"{Metrics.gaussian_nll(y_true_norm[mask], y_pred_norm[mask], y_std_norm[mask]):.6f}"
+            )
+
+        if hybrid_select:
+            print("\n[Hybrid physics-based selection]")
+
+            for p in calibrated_params:
+                selected_col = f"selected_{p}"
+
+                if selected_col not in df_rows.columns or not df_rows[selected_col].notna().any():
+                    print(f"- {p}: no valid hybrid selection")
+                    continue
+
+                y_true = df_rows[f"true_{p}"].to_numpy(dtype=np.float64)
+                y_selected = pd.to_numeric(df_rows[selected_col], errors="coerce").to_numpy(dtype=np.float64)
+
+                mask = np.isfinite(y_selected)
+
+                print(f"- {p}:")
+                print(f"    RMSE selected = {Metrics.rmse(y_true[mask], y_selected[mask]):.6e}")
+                print(f"    MAE selected  = {Metrics.mae(y_true[mask], y_selected[mask]):.6e}")
+                print(f"    MAPE selected = {Metrics.mape_percent(y_true[mask], y_selected[mask]):.3f} %")
 
     # ------------------------------------------------------------------
-    # [4] Prediction summaries
+    # [5] Prediction summaries
     # ------------------------------------------------------------------
     print("\n[3] Sample-level prediction summary")
     for p in calibrated_params:
@@ -280,7 +417,7 @@ def run_inference(
         )
 
     # ------------------------------------------------------------------
-    # [5] Save CSV files
+    # [6] Save CSV files
     # ------------------------------------------------------------------
     if save_csv:
         per_sample_csv = checkpoint_path.with_name(
@@ -311,6 +448,9 @@ def main() -> None:
     parser.add_argument("--aggregate", type=str, default="mean", choices=["mean", "median"])
     parser.add_argument("--manifest-name", type=str, default="manifest.csv", help="Manifest CSV name")
     parser.add_argument("--no-save-csv", action="store_true", help="Do not save prediction CSV files")
+    parser.add_argument("--n-samples", type=int, default=0, help="Number of parameter samples for probabilistic models. Use 0 for point prediction only.")
+    parser.add_argument("--hybrid-select", action="store_true", help="Use sampled parameters and select the candidate minimizing simulation error.")
+    parser.add_argument("--hybrid-n-candidates", type=int, default=100, help="Number of sampled candidates used for hybrid physics-based selection.")
 
     args = parser.parse_args()
 
@@ -322,6 +462,9 @@ def main() -> None:
         aggregate=args.aggregate,
         save_csv=not args.no_save_csv,
         manifest_name=args.manifest_name,
+        n_samples=args.n_samples,
+        hybrid_select=args.hybrid_select,
+        hybrid_n_candidates=args.hybrid_n_candidates,
     )
 
 
