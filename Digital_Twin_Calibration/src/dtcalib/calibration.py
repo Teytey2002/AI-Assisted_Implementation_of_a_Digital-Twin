@@ -879,10 +879,22 @@ class RCNeuralCalibrator:
         output_dim = len(tuple(ckpt["calibrated_params"]))
 
         if model_class == "RCInverseCNN":
-            model = RCInverseCNN(output_dim=output_dim)
+            state = ckpt["model_state_dict"]
+            input_channels = int(state["conv1.weight"].shape[1])
+
+            model = RCInverseCNN(
+                input_channels=input_channels,
+                output_dim=output_dim,
+            )
 
         elif model_class == "ProbabilisticRCInverseCNN":
-            model = ProbabilisticRCInverseCNN(output_dim=output_dim)
+            state = ckpt["model_state_dict"]
+            input_channels = int(state["conv1.weight"].shape[1])
+
+            model = ProbabilisticRCInverseCNN(
+                input_channels=input_channels,
+                output_dim=output_dim,
+            )
 
         elif model_class == "RCInverseMLP":
             state = ckpt["model_state_dict"]

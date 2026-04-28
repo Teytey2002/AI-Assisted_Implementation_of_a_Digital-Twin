@@ -48,6 +48,7 @@ class TargetSpec:
         y = np.asarray(y, dtype=np.float32)
         if y.shape != (self.output_dim,):
             raise ValueError(f"Expected shape {(self.output_dim,)}, got {y.shape}.")
+        
         out = []
         for i, p in enumerate(self.calibrated_params):
             v = float(y[i])
@@ -65,15 +66,17 @@ class TargetSpec:
 
 class RCSignalDataset(Dataset):
     """
-    Dataset based on a manifest.csv file.
+    domain="time":
+        1 sample = 1 CSV experiment
+        x = [time, Vin, Vout] -> shape [3, T]
 
-    Expected manifest columns:
-      group_name, experiment_name, csv_path, R1, R2, C, fc, freq,
-      amplitude, phase, offset, n_periods, samples_per_period, n_samples
+    domain="fft":
+        1 sample = 1 CSV experiment
+        x = [log(freq), log(|H|), phase] for top-k frequencies -> shape [3, K]
 
-    Returns:
-      x: [3, T]   = [time, input, output]
-      y: [d]      = transformed target vector following TargetSpec
+    domain="fft_grouped":
+        1 sample = 1 physical system, i.e. one group_name
+        x = frequency response across all frequencies of this group -> shape [3, N_FREQ]
     """
 
     def __init__(
@@ -83,23 +86,28 @@ class RCSignalDataset(Dataset):
         target_spec: TargetSpec,
         manifest_name: str = "manifest.csv",
         domain: str = "time",
+        fft_top_k: int = 8,
     ):
         self.root_dir = Path(root_dir)
         self.target_spec = target_spec
         self.manifest_path = self.root_dir / manifest_name
+        self.domain = domain
+        self.fft_top_k = int(fft_top_k)
+
+        if self.domain not in {"time", "fft", "fft_grouped", "time_fft"}:
+            raise ValueError("domain must be one of {'time', 'fft', 'fft_grouped'}.")
 
         self.samples: list[tuple[Path, Dict[str, float]]] = []
-        self.cache: Dict[Path, tuple[torch.Tensor, torch.Tensor, torch.Tensor]] = {}
+        self.grouped_samples: list[dict[str, Any]] = []
 
-        self.x_mean: Optional[torch.Tensor] = None   # [3]
-        self.x_std: Optional[torch.Tensor] = None    # [3]
-        self.y_mean: Optional[torch.Tensor] = None   # [d]
-        self.y_std: Optional[torch.Tensor] = None    # [d]
+        self.cache: Dict[Any, tuple[torch.Tensor, torch.Tensor]] = {}
+
+        self.x_mean: Optional[torch.Tensor] = None
+        self.x_std: Optional[torch.Tensor] = None
+        self.y_mean: Optional[torch.Tensor] = None
+        self.y_std: Optional[torch.Tensor] = None
 
         self._build_index_from_manifest()
-        self.domain = domain
-        if self.domain not in {"time", "fft"}:
-            raise ValueError("domain must be either 'time' or 'fft'.")
 
     def _build_index_from_manifest(self) -> None:
         if not self.root_dir.exists():
@@ -110,31 +118,66 @@ class RCSignalDataset(Dataset):
         df = pd.read_csv(self.manifest_path)
 
         required_cols = {"csv_path", "R1", "R2", "C"}
+        if self.domain == "fft_grouped":
+            required_cols |= {"group_name", "freq"}
+
         missing = required_cols - set(df.columns)
         if missing:
-            raise ValueError(
-                f"Manifest is missing required columns: {sorted(missing)}"
-            )
+            raise ValueError(f"Manifest is missing required columns: {sorted(missing)}")
 
-        for _, row in df.iterrows():
-            csv_rel = Path(str(row["csv_path"]))
-            csv_path = self.root_dir / csv_rel
+        if self.domain != "fft_grouped":
+            for _, row in df.iterrows():
+                csv_rel = Path(str(row["csv_path"]))
+                csv_path = self.root_dir / csv_rel
 
-            if not csv_path.exists():
-                raise FileNotFoundError(f"CSV file listed in manifest does not exist: {csv_path}")
+                if not csv_path.exists():
+                    raise FileNotFoundError(f"CSV file listed in manifest does not exist: {csv_path}")
 
+                param_dict = {
+                    "R1": float(row["R1"]),
+                    "R2": float(row["R2"]),
+                    "C": float(row["C"]),
+                }
+                self.samples.append((csv_path, param_dict))
+
+            if len(self.samples) == 0:
+                raise ValueError("No samples found in manifest.")
+
+            return
+
+        # grouped FFT mode
+        for group_name, g in df.groupby("group_name", sort=True):
+            g = g.sort_values("freq")
+
+            csv_paths = []
+            for rel in g["csv_path"].tolist():
+                p = self.root_dir / Path(str(rel))
+                if not p.exists():
+                    raise FileNotFoundError(f"CSV file listed in manifest does not exist: {p}")
+                csv_paths.append(p)
+
+            first = g.iloc[0]
             param_dict = {
-                "R1": float(row["R1"]),
-                "R2": float(row["R2"]),
-                "C": float(row["C"]),
+                "R1": float(first["R1"]),
+                "R2": float(first["R2"]),
+                "C": float(first["C"]),
             }
 
-            self.samples.append((csv_path, param_dict))
+            self.grouped_samples.append(
+                {
+                    "group_name": str(group_name),
+                    "csv_paths": csv_paths,
+                    "freqs": g["freq"].to_numpy(dtype=np.float64),
+                    "param_dict": param_dict,
+                }
+            )
 
-        if len(self.samples) == 0:
-            raise ValueError("No samples found in manifest.")
+        if len(self.grouped_samples) == 0:
+            raise ValueError("No grouped samples found in manifest.")
 
     def __len__(self) -> int:
+        if self.domain == "fft_grouped":
+            return len(self.grouped_samples)
         return len(self.samples)
 
     def set_normalization(
@@ -144,44 +187,93 @@ class RCSignalDataset(Dataset):
         y_mean: torch.Tensor,
         y_std: torch.Tensor,
     ) -> None:
-        self.x_mean = x_mean
-        self.x_std = x_std
-        self.y_mean = y_mean
-        self.y_std = y_std
+        self.x_mean = x_mean.float()
+        self.x_std = x_std.float()
+        self.y_mean = y_mean.float()
+        self.y_std = y_std.float()
 
     def compute_normalization(self, indices: Optional[Sequence[int]] = None) -> None:
         xs = []
         ys = []
 
-        idxs = range(len(self.samples)) if indices is None else indices
+        idxs = range(len(self)) if indices is None else indices
+
         for idx in idxs:
-            csv_path, param_dict = self.samples[idx]
-            df = pd.read_csv(csv_path)
+            x_np, y_np = self._load_raw_item(int(idx))
+            xs.append(x_np)
+            ys.append(y_np)
 
-            # Expect first 3 columns to be time, input, output
-            time = df.iloc[:, 0].values
-            vin = df.iloc[:, 1].values
-            vout = df.iloc[:, 2].values
+        xs_cat = np.concatenate(xs, axis=1)
+        ys_cat = np.stack(ys, axis=0)
 
-            if self.domain == "time":
-                x = np.stack([time, vin, vout], axis=0)
-            else:
-                x = self._build_fft_features(time, vin, vout)
-            y = self.target_spec.transform_vector(param_dict)  # [d]
+        self.x_mean = torch.tensor(xs_cat.mean(axis=1), dtype=torch.float32)
+        self.x_std = torch.tensor(xs_cat.std(axis=1) + 1e-8, dtype=torch.float32)
 
-            xs.append(x)
-            ys.append(y)
+        self.y_mean = torch.tensor(ys_cat.mean(axis=0), dtype=torch.float32)
+        self.y_std = torch.tensor(ys_cat.std(axis=0) + 1e-8, dtype=torch.float32)
 
-        xs = np.concatenate(xs, axis=1)   # [3, total_T]
-        ys = np.stack(ys, axis=0)         # [N, d]
+    def _load_raw_item(self, idx: int) -> tuple[np.ndarray, np.ndarray]:
+        if self.domain == "fft_grouped":
+            sample = self.grouped_samples[idx]
+            x = self._build_grouped_fft_features(sample["csv_paths"])
+            y = self.target_spec.transform_vector(sample["param_dict"])
+            return x, y
 
-        self.x_mean = torch.tensor(xs.mean(axis=1), dtype=torch.float32)
-        self.x_std = torch.tensor(xs.std(axis=1) + 1e-8, dtype=torch.float32)
+        csv_path, param_dict = self.samples[idx]
+        df = pd.read_csv(csv_path)
 
-        self.y_mean = torch.tensor(ys.mean(axis=0), dtype=torch.float32)
-        self.y_std = torch.tensor(ys.std(axis=0) + 1e-8, dtype=torch.float32)
-    
-    def _build_fft_features(self, time, vin, vout):
+        time = df.iloc[:, 0].to_numpy(dtype=np.float64)
+        vin = df.iloc[:, 1].to_numpy(dtype=np.float64)
+        vout = df.iloc[:, 2].to_numpy(dtype=np.float64)
+
+        if self.domain == "time":
+            x = np.stack([time, vin, vout], axis=0).astype(np.float32)
+
+        elif self.domain == "fft":
+            x = self._build_fft_features(time, vin, vout)
+
+        elif self.domain == "time_fft":
+            x_time = np.stack([time, vin, vout], axis=0).astype(np.float32)
+
+            x_fft = self._build_fft_features(time, vin, vout)  # [3, K]
+
+            K = x_fft.shape[1]
+            T = x_time.shape[1]
+
+            x_fft_interp = np.zeros((3, T), dtype=np.float32)
+            grid_fft = np.arange(K)
+            grid_time = np.linspace(0, K - 1, T)
+
+            for i in range(3):
+                x_fft_interp[i] = np.interp(grid_time, grid_fft, x_fft[i])
+
+            x = np.concatenate([x_time, x_fft_interp], axis=0).astype(np.float32)
+
+        else:
+            raise ValueError(f"Unsupported domain: {self.domain}")
+
+        y = self.target_spec.transform_vector(param_dict)
+        return x, y
+
+    def __getitem__(self, idx: int) -> tuple[torch.Tensor, torch.Tensor]:
+        if idx in self.cache:
+            return self.cache[idx]
+
+        x_np, y_np = self._load_raw_item(idx)
+
+        x = torch.tensor(x_np, dtype=torch.float32)
+        y = torch.tensor(y_np, dtype=torch.float32)
+
+        if self.x_mean is not None and self.x_std is not None:
+            x = (x - self.x_mean[:, None]) / self.x_std[:, None]
+
+        if self.y_mean is not None and self.y_std is not None:
+            y = (y - self.y_mean) / self.y_std
+
+        self.cache[idx] = (x, y)
+        return x, y
+
+    def _build_fft_features(self, time, vin, vout) -> np.ndarray:
         dt = float(np.mean(np.diff(time)))
         n = len(time)
 
@@ -189,10 +281,13 @@ class RCSignalDataset(Dataset):
         U = np.fft.rfft(vin)
         Y = np.fft.rfft(vout)
 
-        amp_u = np.abs(U)
-        amp_u[0] = 0.0  # remove DC
+        amp_u = np.abs(U).astype(np.float64)
+        amp_u[0] = 0.0
 
-        top_k = 8
+        top_k = min(self.fft_top_k, len(amp_u) - 1)
+        if top_k <= 0:
+            raise ValueError("FFT requires at least one non-DC frequency bin.")
+
         idxs = np.argsort(amp_u)[-top_k:]
         idxs = idxs[np.argsort(freqs[idxs])]
 
@@ -200,38 +295,49 @@ class RCSignalDataset(Dataset):
 
         f = np.log1p(freqs[idxs])
         mag = np.log1p(np.abs(H))
-        phase = np.angle(H)
+        phase = np.unwrap(np.angle(H))
 
         return np.stack([f, mag, phase], axis=0).astype(np.float32)
 
-    def __getitem__(self, idx: int):
-        csv_path, param_dict = self.samples[idx]
+    def _build_grouped_fft_features(self, csv_paths: list[Path]) -> np.ndarray:
+        freqs_out = []
+        mags_out = []
+        phases_out = []
 
-        if csv_path not in self.cache:
+        for csv_path in csv_paths:
             df = pd.read_csv(csv_path)
 
-            time = df.iloc[:, 0].values.astype(np.float32)
-            vin  = df.iloc[:, 1].values.astype(np.float32)
-            vout = df.iloc[:, 2].values.astype(np.float32)
+            time = df.iloc[:, 0].to_numpy(dtype=np.float64)
+            vin = df.iloc[:, 1].to_numpy(dtype=np.float64)
+            vout = df.iloc[:, 2].to_numpy(dtype=np.float64)
 
-            self.cache[csv_path] = (time, vin, vout)
+            dt = float(np.mean(np.diff(time)))
+            n = len(time)
 
-        time, vin, vout = self.cache[csv_path]
+            freqs = np.fft.rfftfreq(n, d=dt)
+            U = np.fft.rfft(vin)
+            Y = np.fft.rfft(vout)
 
-        if self.domain == "time":
-            x_np = np.stack([time, vin, vout], axis=0)
-        else:
-            x_np = self._build_fft_features(time, vin, vout)
+            amp_u = np.abs(U).astype(np.float64)
+            amp_u[0] = 0.0
 
-        x = torch.tensor(x_np, dtype=torch.float32)
+            idx = int(np.argmax(amp_u))
+            f = float(freqs[idx])
+            H = Y[idx] / (U[idx] + 1e-12)
 
-        y_np = self.target_spec.transform_vector(param_dict)
-        y = torch.tensor(y_np, dtype=torch.float32)
+            freqs_out.append(np.log1p(f))
+            mags_out.append(np.log1p(np.abs(H)))
+            phases_out.append(np.angle(H))
 
-        if self.x_mean is not None:
-            x = (x - self.x_mean[:, None]) / self.x_std[:, None]
+        phases = np.unwrap(np.asarray(phases_out, dtype=np.float64))
 
-        if self.y_mean is not None:
-            y = (y - self.y_mean) / self.y_std
+        x = np.stack(
+            [
+                np.asarray(freqs_out, dtype=np.float64),
+                np.asarray(mags_out, dtype=np.float64),
+                phases,
+            ],
+            axis=0,
+        )
 
-        return x, y
+        return x.astype(np.float32)

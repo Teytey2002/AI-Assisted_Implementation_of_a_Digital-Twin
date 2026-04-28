@@ -96,7 +96,7 @@ def run_inference(
         root_dir,
         target_spec=target_spec,
         manifest_name=manifest_name,
-        domain="time",
+        domain="time_fft",
     )
 
     dataset.set_normalization(
@@ -123,7 +123,14 @@ def run_inference(
     # Sample-level inference
     # ------------------------------------------------------------------
     for idx in test_idx:
-        csv_path, param_dict = dataset.samples[idx]
+        if dataset.domain == "fft_grouped":
+            group_sample = dataset.grouped_samples[idx]
+            param_dict = group_sample["param_dict"]
+            csv_path = group_sample["csv_paths"][0]
+            sample_name = group_sample["group_name"]
+        else:
+            csv_path, param_dict = dataset.samples[idx]
+            sample_name = str(csv_path)
 
         x, y_norm_true = dataset[idx]
 
@@ -185,6 +192,7 @@ def run_inference(
 
         row: dict[str, Any] = {
             "index": int(idx),
+            "sample_name": sample_name,
             "csv_path": str(csv_path),
         }
 
@@ -363,25 +371,25 @@ def run_inference(
                 f"{Metrics.gaussian_nll(y_true_norm[mask], y_pred_norm[mask], y_std_norm[mask]):.6f}"
             )
 
-        if hybrid_select:
-            print("\n[Hybrid physics-based selection]")
+    if hybrid_select:
+        print("\n[Hybrid physics-based selection]")
 
-            for p in calibrated_params:
-                selected_col = f"selected_{p}"
+        for p in calibrated_params:
+            selected_col = f"selected_{p}"
 
-                if selected_col not in df_rows.columns or not df_rows[selected_col].notna().any():
-                    print(f"- {p}: no valid hybrid selection")
-                    continue
+            if selected_col not in df_rows.columns or not df_rows[selected_col].notna().any():
+                print(f"- {p}: no valid hybrid selection")
+                continue
 
-                y_true = df_rows[f"true_{p}"].to_numpy(dtype=np.float64)
-                y_selected = pd.to_numeric(df_rows[selected_col], errors="coerce").to_numpy(dtype=np.float64)
+            y_true = df_rows[f"true_{p}"].to_numpy(dtype=np.float64)
+            y_selected = pd.to_numeric(df_rows[selected_col], errors="coerce").to_numpy(dtype=np.float64)
 
-                mask = np.isfinite(y_selected)
+            mask = np.isfinite(y_selected)
 
-                print(f"- {p}:")
-                print(f"    RMSE selected = {Metrics.rmse(y_true[mask], y_selected[mask]):.6e}")
-                print(f"    MAE selected  = {Metrics.mae(y_true[mask], y_selected[mask]):.6e}")
-                print(f"    MAPE selected = {Metrics.mape_percent(y_true[mask], y_selected[mask]):.3f} %")
+            print(f"- {p}:")
+            print(f"    RMSE selected = {Metrics.rmse(y_true[mask], y_selected[mask]):.6e}")
+            print(f"    MAE selected  = {Metrics.mae(y_true[mask], y_selected[mask]):.6e}")
+            print(f"    MAPE selected = {Metrics.mape_percent(y_true[mask], y_selected[mask]):.3f} %")
 
     # ------------------------------------------------------------------
     # [5] Prediction summaries

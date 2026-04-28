@@ -17,8 +17,8 @@ import torch.optim as optim
 from torch.utils.data import DataLoader, Subset
 from torch.utils.tensorboard import SummaryWriter
 
-from model import RCInverseCNN, ProbabilisticRCInverseCNN, RCInverseMLP
-from dataset import RCSignalDataset, TargetSpec
+from dtcalib.deep_learning.model import RCInverseCNN, ProbabilisticRCInverseCNN, RCInverseMLP
+from dtcalib.deep_learning.dataset import RCSignalDataset, TargetSpec
 from dtcalib.deep_learning.splits_utils import load_split, get_indices
 from dtcalib.calibration import NormalizationStats
 
@@ -55,14 +55,24 @@ def gaussian_nll_loss(
 # ------------------------------------------------------------
 # Model factory
 # ------------------------------------------------------------
-def build_model(model_name: str, output_dim: int) -> tuple[nn.Module, str, str]:
+def build_model(
+    model_name: str,
+    output_dim: int,
+    input_channels: int = 3,
+) -> tuple[nn.Module, str, str]:
     model_name = model_name.lower()
 
     if model_name == "cnn":
-        return RCInverseCNN(output_dim=output_dim), "deterministic", "RCInverseCNN"
+        return RCInverseCNN(
+            input_channels=input_channels,
+            output_dim=output_dim,
+        ), "deterministic", "RCInverseCNN"
 
     if model_name == "prob_cnn":
-        return ProbabilisticRCInverseCNN(output_dim=output_dim), "probabilistic", "ProbabilisticRCInverseCNN"
+        return ProbabilisticRCInverseCNN(
+            input_channels=input_channels,
+            output_dim=output_dim,
+        ), "probabilistic", "ProbabilisticRCInverseCNN"
 
     if model_name == "mlp":
         return RCInverseMLP(input_dim=24, output_dim=output_dim), "deterministic", "RCInverseMLP"
@@ -137,7 +147,7 @@ def train(
     # -------------------------
     # Dataset
     # -------------------------
-    dataset = RCSignalDataset(dataset_root, target_spec=target_spec, manifest_name="manifest.csv", domain="fft")
+    dataset = RCSignalDataset(dataset_root, target_spec=target_spec, manifest_name="manifest.csv", domain="time_fft")
 
     payload = load_split(split_json_path)
     train_idx, val_idx, test_idx = get_indices(payload)
@@ -158,6 +168,11 @@ def train(
 
     # Compute normalization ONLY on train indices
     dataset.compute_normalization(indices=train_idx)
+
+    # log of number of frequencies used as input
+    print("x_mean shape:", dataset.x_mean.shape)
+    print("x_std shape :", dataset.x_std.shape)
+    print("Example x shape:", dataset[train_idx[0]][0].shape)
 
     # Apply same normalization to all subsets through the shared dataset
     dataset.set_normalization(
@@ -197,7 +212,10 @@ def train(
     # -------------------------
     # Model
     # -------------------------
-    model, model_mode, model_class_name = build_model(model_name, output_dim=len(calibrated_params))
+    example_x, _ = dataset[train_idx[0]]
+    input_channels = int(example_x.shape[0])
+
+    model, model_mode, model_class_name = build_model(model_name, output_dim=len(calibrated_params), input_channels=input_channels)
     model = model.to(device)
 
     optimizer = optim.Adam(

@@ -145,3 +145,547 @@ n_train=25600 | n_val=6400 | n_test=8000
 
 Frenquence FFT : 
 
+  python3 inference.py \
+  --checkpoint models/prob_cnn_2026-04-28_10-23-54_best.pth \
+  --root-dir ../../../data/LP_DATASET_R1_R2_C \
+  --split-json ./splits/rc_r1r2c_nested_fold0.json \
+  --device cuda \
+  --aggregate mean \
+  --n-samples 200 \
+  --hybrid-select \
+  --hybrid-n-candidates 100
+Checkpoint : models/prob_cnn_2026-04-28_10-23-54_best.pth
+Root dir   : ../../../data/LP_DATASET_R1_R2_C
+Split JSON : splits/rc_r1r2c_nested_fold0.json
+Device     : cuda
+Aggregate  : mean
+Calibrated params : ('R1', 'R2', 'C')
+Transform map     : {'R1': 'log', 'R2': 'log', 'C': 'log'}
+n_train=25600 | n_val=6400 | n_test=8000
+
+[1] Sample-level metrics
+- R1:
+    RMSE = 3.159918e+03
+    MAE  = 2.363438e+03
+    MAPE = 21.291 %
+- R2:
+    RMSE = 3.104842e+03
+    MAE  = 2.313093e+03
+    MAPE = 20.676 %
+- C:
+    RMSE = 4.345949e-07
+    MAE  = 3.417168e-07
+    MAPE = 22.518 %
+
+[2] Aggregated metrics by true parameter combination
+- Aggregation = mean
+- #groups     = 200
+- R1:
+    RMSE = 3.158560e+03
+    MAE  = 2.362583e+03
+    MAPE = 21.284 %
+- R2:
+    RMSE = 3.102699e+03
+    MAE  = 2.311076e+03
+    MAPE = 20.659 %
+- C:
+    RMSE = 4.343401e-07
+    MAE  = 3.416068e-07
+    MAPE = 22.512 %
+
+[Probabilistic evaluation]
+- R1:
+    mean predicted std = 2.672601e+03
+    corr(abs_error, pred_std) = 0.5051
+    empirical 95% coverage = 0.982
+    mean 95% interval width = 1.014617e+04
+    Gaussian NLL norm = 0.758293
+
+[Hybrid physics-based selection]
+- R1:
+    RMSE selected = 3.490965e+03
+    MAE selected  = 2.580450e+03
+    MAPE selected = 23.377 %
+- R2:
+    RMSE selected = 3.484416e+03
+    MAE selected  = 2.572697e+03
+    MAPE selected = 23.586 %
+- C:
+    RMSE selected = 5.148460e-07
+    MAE selected  = 3.880153e-07
+    MAPE selected = 25.451 %
+- R2:
+    mean predicted std = 2.662080e+03
+    corr(abs_error, pred_std) = 0.5296
+    empirical 95% coverage = 0.985
+    mean 95% interval width = 1.009823e+04
+    Gaussian NLL norm = 0.731341
+
+[Hybrid physics-based selection]
+- R1:
+    RMSE selected = 3.490965e+03
+    MAE selected  = 2.580450e+03
+    MAPE selected = 23.377 %
+- R2:
+    RMSE selected = 3.484416e+03
+    MAE selected  = 2.572697e+03
+    MAPE selected = 23.586 %
+- C:
+    RMSE selected = 5.148460e-07
+    MAE selected  = 3.880153e-07
+    MAPE selected = 25.451 %
+- C:
+    mean predicted std = 4.343326e-07
+    corr(abs_error, pred_std) = 0.5515
+    empirical 95% coverage = 0.986
+    mean 95% interval width = 1.648245e-06
+    Gaussian NLL norm = 0.719042
+
+[Hybrid physics-based selection]
+- R1:
+    RMSE selected = 3.490965e+03
+    MAE selected  = 2.580450e+03
+    MAPE selected = 23.377 %
+- R2:
+    RMSE selected = 3.484416e+03
+    MAE selected  = 2.572697e+03
+    MAPE selected = 23.586 %
+- C:
+    RMSE selected = 5.148460e-07
+    MAE selected  = 3.880153e-07
+    MAPE selected = 25.451 %
+
+[3] Sample-level prediction summary
+- R1:
+    true min/max/mean/std = 5.000000e+03 / 2.000000e+04 / 1.135869e+04 / 5.065834e+03
+    pred min/max/mean/std = 5.428461e+03 / 1.960876e+04 / 1.056997e+04 / 3.507919e+03
+- R2:
+    true min/max/mean/std = 5.000000e+03 / 2.000000e+04 / 1.117958e+04 / 4.818882e+03
+    pred min/max/mean/std = 5.061176e+03 / 1.959002e+04 / 1.033109e+04 / 3.430328e+03
+- C:
+    true min/max/mean/std = 8.000000e-07 / 3.200000e-06 / 1.681413e-06 / 7.174227e-07
+    pred min/max/mean/std = 8.184981e-07 / 2.993534e-06 / 1.686893e-06 / 5.662793e-07
+
+[4] Aggregated prediction summary
+- R1:
+    true min/max/mean/std = 5.000000e+03 / 2.000000e+04 / 1.135869e+04 / 5.065834e+03
+    pred min/max/mean/std = 5.547224e+03 / 1.918787e+04 / 1.056997e+04 / 3.506696e+03
+- R2:
+    true min/max/mean/std = 5.000000e+03 / 2.000000e+04 / 1.117958e+04 / 4.818882e+03
+    pred min/max/mean/std = 5.177359e+03 / 1.899386e+04 / 1.033109e+04 / 3.428389e+03
+- C:
+    true min/max/mean/std = 8.000000e-07 / 3.200000e-06 / 1.681413e-06 / 7.174227e-07
+    pred min/max/mean/std = 8.319572e-07 / 2.931178e-06 / 1.686893e-06 / 5.660839e-07
+
+[5] CSV saved (sample-level) : models/prob_cnn_2026-04-28_10-23-54_best_test_predictions_per_sample.csv
+[5] CSV saved (group-level)  : models/prob_cnn_2026-04-28_10-23-54_best_test_predictions_per_group_mean.csv
+
+
+
+
+Ici on reste sur freq mais on test avec un plusieurs freq et pas juste un arg max
+Oui, tes résultats FFT confirment surtout une chose : ta FFT actuelle n’apporte pas plus d’information que la série temporelle, 
+parce qu’elle est encore basée sur une seule fréquence dominante. Dans ton dataset.py, _build_fft_features() fait encore idx = np.argmax(np.abs(U)), 
+puis retourne seulement [f, mag, phase] en shape [3, 1] . Donc on commence bien par le test 1 : FFT multi-fréquence structurée.
+On change dans Dataset le build FFT avec un top_k = 8 
+Résultat : l'input devient [3, 8] au lieu de [3, 1]
+
+Mon avis : c’est le bon premier test, mais je ne m’attends pas à une révolution énorme tant que ton dataset contient une seule excitation par sample. 
+Si top-k améliore peu, ça confirmera que la limite principale est l’identifiabilité physique, pas le réseau.
+
+  Hybrid version with physics-based selection among sampled candidates:
+  python3 inference.py \
+  --checkpoint models/prob_cnn_2026-04-28_11-09-02_best.pth \
+  --root-dir ../../../data/LP_DATASET_R1_R2_C \
+  --split-json ./splits/rc_r1r2c_nested_fold0.json \
+  --device cuda \
+  --aggregate mean \
+  --n-samples 200 \
+  --hybrid-select \
+  --hybrid-n-candidates 100
+Hybrid: command not found
+Checkpoint : models/prob_cnn_2026-04-28_11-09-02_best.pth
+Root dir   : ../../../data/LP_DATASET_R1_R2_C
+Split JSON : splits/rc_r1r2c_nested_fold0.json
+Device     : cuda
+Aggregate  : mean
+Calibrated params : ('R1', 'R2', 'C')
+Transform map     : {'R1': 'log', 'R2': 'log', 'C': 'log'}
+n_train=25600 | n_val=6400 | n_test=8000
+
+[1] Sample-level metrics
+- R1:
+    RMSE = 3.159918e+03
+    MAE  = 2.363438e+03
+    MAPE = 21.291 %
+- R2:
+    RMSE = 3.104842e+03
+    MAE  = 2.313093e+03
+    MAPE = 20.676 %
+- C:
+    RMSE = 4.345949e-07
+    MAE  = 3.417168e-07
+    MAPE = 22.518 %
+
+[2] Aggregated metrics by true parameter combination
+- Aggregation = mean
+- #groups     = 200
+- R1:
+    RMSE = 3.158560e+03
+    MAE  = 2.362583e+03
+    MAPE = 21.284 %
+- R2:
+    RMSE = 3.102699e+03
+    MAE  = 2.311076e+03
+    MAPE = 20.659 %
+- C:
+    RMSE = 4.343401e-07
+    MAE  = 3.416068e-07
+    MAPE = 22.512 %
+
+[Probabilistic evaluation]
+- R1:
+    mean predicted std = 2.672927e+03
+    corr(abs_error, pred_std) = 0.5064
+    empirical 95% coverage = 0.982
+    mean 95% interval width = 1.013380e+04
+    Gaussian NLL norm = 0.758293
+
+[Hybrid physics-based selection]
+- R1:
+    RMSE selected = 3.449624e+03
+    MAE selected  = 2.547159e+03
+    MAPE selected = 23.081 %
+- R2:
+    RMSE selected = 3.441446e+03
+    MAE selected  = 2.536080e+03
+    MAPE selected = 23.260 %
+- C:
+    RMSE selected = 5.096646e-07
+    MAE selected  = 3.843374e-07
+    MAPE selected = 25.059 %
+- R2:
+    mean predicted std = 2.660540e+03
+    corr(abs_error, pred_std) = 0.5273
+    empirical 95% coverage = 0.984
+    mean 95% interval width = 1.009978e+04
+    Gaussian NLL norm = 0.731341
+
+[Hybrid physics-based selection]
+- R1:
+    RMSE selected = 3.449624e+03
+    MAE selected  = 2.547159e+03
+    MAPE selected = 23.081 %
+- R2:
+    RMSE selected = 3.441446e+03
+    MAE selected  = 2.536080e+03
+    MAPE selected = 23.260 %
+- C:
+    RMSE selected = 5.096646e-07
+    MAE selected  = 3.843374e-07
+    MAPE selected = 25.059 %
+- C:
+    mean predicted std = 4.341540e-07
+    corr(abs_error, pred_std) = 0.5490
+    empirical 95% coverage = 0.987
+    mean 95% interval width = 1.647473e-06
+    Gaussian NLL norm = 0.719042
+
+[Hybrid physics-based selection]
+- R1:
+    RMSE selected = 3.449624e+03
+    MAE selected  = 2.547159e+03
+    MAPE selected = 23.081 %
+- R2:
+    RMSE selected = 3.441446e+03
+    MAE selected  = 2.536080e+03
+    MAPE selected = 23.260 %
+- C:
+    RMSE selected = 5.096646e-07
+    MAE selected  = 3.843374e-07
+    MAPE selected = 25.059 %
+
+[3] Sample-level prediction summary
+- R1:
+    true min/max/mean/std = 5.000000e+03 / 2.000000e+04 / 1.135869e+04 / 5.065834e+03
+    pred min/max/mean/std = 5.428461e+03 / 1.960876e+04 / 1.056997e+04 / 3.507919e+03
+- R2:
+    true min/max/mean/std = 5.000000e+03 / 2.000000e+04 / 1.117958e+04 / 4.818882e+03
+    pred min/max/mean/std = 5.061176e+03 / 1.959002e+04 / 1.033109e+04 / 3.430328e+03
+- C:
+    true min/max/mean/std = 8.000000e-07 / 3.200000e-06 / 1.681413e-06 / 7.174227e-07
+    pred min/max/mean/std = 8.184981e-07 / 2.993534e-06 / 1.686893e-06 / 5.662793e-07
+
+[4] Aggregated prediction summary
+- R1:
+    true min/max/mean/std = 5.000000e+03 / 2.000000e+04 / 1.135869e+04 / 5.065834e+03
+    pred min/max/mean/std = 5.547224e+03 / 1.918787e+04 / 1.056997e+04 / 3.506696e+03
+- R2:
+    true min/max/mean/std = 5.000000e+03 / 2.000000e+04 / 1.117958e+04 / 4.818882e+03
+    pred min/max/mean/std = 5.177359e+03 / 1.899386e+04 / 1.033109e+04 / 3.428389e+03
+- C:
+    true min/max/mean/std = 8.000000e-07 / 3.200000e-06 / 1.681413e-06 / 7.174227e-07
+    pred min/max/mean/std = 8.319572e-07 / 2.931178e-06 / 1.686893e-06 / 5.660839e-07
+
+[5] CSV saved (sample-level) : models/prob_cnn_2026-04-28_11-09-02_best_test_predictions_per_sample.csv
+[5] CSV saved (group-level)  : models/prob_cnn_2026-04-28_11-09-02_best_test_predictions_per_group_mean.csv
+
+
+
+
+Tes métriques sont quasi identiques :
+
+R1 ≈ 21.3 %
+R2 ≈ 20.7 %
+C  ≈ 22.5 %
+
+Donc :
+time CNN ≈ FFT 1 fréquence ≈ FFT top-k
+
+Ça veut dire que le problème n’est plus le modèle. Le problème est que chaque sample individuel ne contient pas assez d’information pour 
+identifier R1, R2 et C.
+Autre point : le Hybrid selection empire encore les résultats. Donc pour l’instant, il ne faut pas l’utiliser comme résultat principal. 
+Il est intéressant comme expérience, mais pas comme amélioration.
+
+
+Ce qu’il faut faire maintenant
+
+Le vrai test FFT multi-fréquence n’est pas :
+top-k fréquences dans une seule simulation
+
+mais :
+un sample = plusieurs expériences à différentes fréquences
+
+Exemple :
+Input du modèle =
+[
+  H(f1),
+  H(f2),
+  H(f3),
+  ...
+  H(fN)
+]
+
+Target =
+[R1, R2, C]
+
+Autrement dit, pour un même triplet physique (R1, R2, C), tu regroupes plusieurs fichiers CSV correspondant à différentes fréquences.
+
+On a fait un nouveau dataset avec des splits pour avoir des freq fft groupé 
+et voir les résultats avec un trian sur ça 
+
+
+
+(fft_grouped)
+python3 inference.py   --checkpoint models/prob_cnn_2026-04-28_13-27-05_best.pth   --root-dir ../../../data/LP_DATASET_R1_R2_C   --split-json ./splits/rc_r1r2c_fft_grouped_fold0.json   --device cuda   --aggregate mean   --n-samples 200
+Checkpoint : models/prob_cnn_2026-04-28_13-27-05_best.pth
+Root dir   : ../../../data/LP_DATASET_R1_R2_C
+Split JSON : splits/rc_r1r2c_fft_grouped_fold0.json
+Device     : cuda
+Aggregate  : mean
+Calibrated params : ('R1', 'R2', 'C')
+Transform map     : {'R1': 'log', 'R2': 'log', 'C': 'log'}
+n_train=640 | n_val=160 | n_test=200
+
+[1] Sample-level metrics
+- R1:
+    RMSE = 2.734321e+03
+    MAE  = 2.134145e+03
+    MAPE = 20.775 %
+- R2:
+    RMSE = 2.796423e+03
+    MAE  = 2.162006e+03
+    MAPE = 21.190 %
+- C:
+    RMSE = 4.558162e-07
+    MAE  = 3.434351e-07
+    MAPE = 19.901 %
+
+[2] Aggregated metrics by true parameter combination
+- Aggregation = mean
+- #groups     = 200
+- R1:
+    RMSE = 2.734321e+03
+    MAE  = 2.134145e+03
+    MAPE = 20.775 %
+- R2:
+    RMSE = 2.796423e+03
+    MAE  = 2.162006e+03
+    MAPE = 21.190 %
+- C:
+    RMSE = 4.558162e-07
+    MAE  = 3.434351e-07
+    MAPE = 19.901 %
+
+[Probabilistic evaluation]
+- R1:
+    mean predicted std = 2.642451e+03
+    corr(abs_error, pred_std) = 0.4955
+    empirical 95% coverage = 0.995
+    mean 95% interval width = 1.010173e+04
+    Gaussian NLL norm = 0.720201
+- R2:
+    mean predicted std = 2.580228e+03
+    corr(abs_error, pred_std) = 0.4976
+    empirical 95% coverage = 0.990
+    mean 95% interval width = 9.773020e+03
+    Gaussian NLL norm = 0.745068
+- C:
+    mean predicted std = 4.206843e-07
+    corr(abs_error, pred_std) = 0.4713
+    empirical 95% coverage = 0.995
+    mean 95% interval width = 1.599888e-06
+    Gaussian NLL norm = 0.715755
+
+[3] Sample-level prediction summary
+- R1:
+    true min/max/mean/std = 5.000000e+03 / 2.000000e+04 / 1.082351e+04 / 4.560881e+03
+    pred min/max/mean/std = 5.339767e+03 / 1.942419e+04 / 1.055647e+04 / 3.330477e+03
+- R2:
+    true min/max/mean/std = 5.000000e+03 / 2.000000e+04 / 1.091359e+04 / 4.812944e+03
+    pred min/max/mean/std = 5.198938e+03 / 1.961754e+04 / 1.050802e+04 / 3.444706e+03
+- C:
+    true min/max/mean/std = 8.000000e-07 / 3.200000e-06 / 1.789482e-06 / 7.557131e-07
+    pred min/max/mean/std = 8.157862e-07 / 3.164921e-06 / 1.696128e-06 / 6.134793e-07
+
+[4] Aggregated prediction summary
+- R1:
+    true min/max/mean/std = 5.000000e+03 / 2.000000e+04 / 1.082351e+04 / 4.560881e+03
+    pred min/max/mean/std = 5.339767e+03 / 1.942419e+04 / 1.055647e+04 / 3.330477e+03
+- R2:
+    true min/max/mean/std = 5.000000e+03 / 2.000000e+04 / 1.091359e+04 / 4.812944e+03
+    pred min/max/mean/std = 5.198938e+03 / 1.961754e+04 / 1.050802e+04 / 3.444706e+03
+- C:
+    true min/max/mean/std = 8.000000e-07 / 3.200000e-06 / 1.789482e-06 / 7.557131e-07
+    pred min/max/mean/std = 8.157862e-07 / 3.164921e-06 / 1.696128e-06 / 6.134793e-07
+
+[5] CSV saved (sample-level) : models/prob_cnn_2026-04-28_13-27-05_best_test_predictions_per_sample.csv
+[5] CSV saved (group-level)  : models/prob_cnn_2026-04-28_13-27-05_best_test_predictions_per_group_mean.csv
+
+
+
+
+
+
+On va juste :
+
+ajouter un nouveau mode = "time_fft"
+🎯 2. Objectif du test
+
+On veut que le modèle voie :
+
+x_time  = [time, Vin, Vout]        → [3, T]
+x_fft   = [freq, gain, phase]      → [3, N_freq]
+
+x_final = concat des deux
+
+🔬 9. Pourquoi ça marche (scientifique)
+
+Dans la littérature :
+
+👉 combinaison de représentations :
+
+time domain → dynamique temporelle
+frequency domain → structure système
+
+➡️ améliore les inverse problems
+
+🧠 10. Insight important
+
+Si ça marche :
+
+👉 ton problème était manque d’information
+
+Si ça ne marche pas :
+
+👉 ton problème est non identifiable physiquement
+
+
+
+(time_fft)
+python3 inference.py   --checkpoint models/prob_cnn_2026-04-28_15-19-48_best.pth   --root-dir ../../.
+./data/LP_DATASET_R1_R2_C   --split-json ./splits/rc_r1r2c_nested_fold0.json   --device cuda
+   --aggregate mean   --n-samples 200
+Checkpoint : models/prob_cnn_2026-04-28_15-19-48_best.pth
+Root dir   : ../../../data/LP_DATASET_R1_R2_C
+Split JSON : splits/rc_r1r2c_nested_fold0.json
+Device     : cuda
+Aggregate  : mean
+Calibrated params : ('R1', 'R2', 'C')
+Transform map     : {'R1': 'log', 'R2': 'log', 'C': 'log'}
+n_train=25600 | n_val=6400 | n_test=8000
+
+[1] Sample-level metrics
+- R1:
+    RMSE = 3.180844e+03
+    MAE  = 2.362599e+03
+    MAPE = 20.965 %
+- R2:
+    RMSE = 3.094751e+03
+    MAE  = 2.288094e+03
+    MAPE = 20.527 %
+- C:
+    RMSE = 4.332141e-07
+    MAE  = 3.377954e-07
+    MAPE = 22.022 %
+
+[2] Aggregated metrics by true parameter combination
+- Aggregation = mean
+- #groups     = 200
+- R1:
+    RMSE = 3.179494e+03
+    MAE  = 2.361464e+03
+    MAPE = 20.955 %
+- R2:
+    RMSE = 3.092920e+03
+    MAE  = 2.285955e+03
+    MAPE = 20.508 %
+- C:
+    RMSE = 4.328289e-07
+    MAE  = 3.376203e-07
+    MAPE = 22.013 %
+
+[Probabilistic evaluation]
+- R1:
+    mean predicted std = 2.669373e+03
+    corr(abs_error, pred_std) = 0.5097
+    empirical 95% coverage = 0.986
+    mean 95% interval width = 1.012426e+04
+    Gaussian NLL norm = 0.750159
+- R2:
+    mean predicted std = 2.680108e+03
+    corr(abs_error, pred_std) = 0.5298
+    empirical 95% coverage = 0.983
+    mean 95% interval width = 1.016769e+04
+    Gaussian NLL norm = 0.724777
+- C:
+    mean predicted std = 4.339986e-07
+    corr(abs_error, pred_std) = 0.5332
+    empirical 95% coverage = 0.993
+    mean 95% interval width = 1.647114e-06
+    Gaussian NLL norm = 0.709976
+
+[3] Sample-level prediction summary
+- R1:
+    true min/max/mean/std = 5.000000e+03 / 2.000000e+04 / 1.135869e+04 / 5.065834e+03
+    pred min/max/mean/std = 5.255447e+03 / 1.921778e+04 / 1.045489e+04 / 3.483464e+03
+- R2:
+    true min/max/mean/std = 5.000000e+03 / 2.000000e+04 / 1.117958e+04 / 4.818882e+03
+    pred min/max/mean/std = 5.130348e+03 / 1.987301e+04 / 1.039245e+04 / 3.492249e+03
+- C:
+    true min/max/mean/std = 8.000000e-07 / 3.200000e-06 / 1.681413e-06 / 7.174227e-07
+    pred min/max/mean/std = 8.268127e-07 / 2.983350e-06 / 1.669043e-06 / 5.533975e-07
+
+[4] Aggregated prediction summary
+- R1:
+    true min/max/mean/std = 5.000000e+03 / 2.000000e+04 / 1.135869e+04 / 5.065834e+03
+    pred min/max/mean/std = 5.327963e+03 / 1.896397e+04 / 1.045489e+04 / 3.482232e+03
+- R2:
+    true min/max/mean/std = 5.000000e+03 / 2.000000e+04 / 1.117958e+04 / 4.818882e+03
+    pred min/max/mean/std = 5.225444e+03 / 1.961626e+04 / 1.039245e+04 / 3.490627e+03
+- C:
+    true min/max/mean/std = 8.000000e-07 / 3.200000e-06 / 1.681413e-06 / 7.174227e-07
+    pred min/max/mean/std = 8.375444e-07 / 2.939140e-06 / 1.669043e-06 / 5.530960e-07
+
+[5] CSV saved (sample-level) : models/prob_cnn_2026-04-28_15-19-48_best_test_predictions_per_sample.csv
+[5] CSV saved (group-level)  : models/prob_cnn_2026-04-28_15-19-48_best_test_predictions_per_group_mean.csv
