@@ -1,0 +1,229 @@
+TIME
+(torch_gpu) pc_ai@PCAI:/mnt/c/Users/samue/Documents/AI-Assisted_Implementation_of_a_Digital-Twin/Digital_Twin_Calibration/src/dtcalib/deep_learning$ python3 inference.py   --checkpoint models/mlp_2026-04-30_10-33-47_best.pth   --root-dir ../../../data/LP_DATASET_R1_R2_C   --split-json ./splits/rc_r1r2c_nested_fold0.json   --device cuda   --aggregate mean
+Checkpoint : models/mlp_2026-04-30_10-33-47_best.pth
+Root dir   : ../../../data/LP_DATASET_R1_R2_C
+Split JSON : splits/rc_r1r2c_nested_fold0.json
+Device     : cuda
+Aggregate  : mean
+/mnt/c/Users/samue/Documents/AI-Assisted_Implementation_of_a_Digital-Twin/Digital_Twin_Calibration/src/dtcalib/calibration.py:876: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  ckpt = torch.load(checkpoint_path, map_location="cpu")
+Calibrated params : ('R2', 'C')
+Transform map     : {'R2': 'log', 'C': 'log'}
+n_train=25600 | n_val=6400 | n_test=8000
+
+[1] Sample-level metrics
+- R2:
+    RMSE = 3.212966e+03
+    MAE  = 2.409857e+03
+    MAPE = 21.144 %
+- C:
+    RMSE = 4.452622e-07
+    MAE  = 3.531269e-07
+    MAPE = 23.367 %
+
+[2] Aggregated metrics by true parameter combination
+- Aggregation = mean
+- #groups     = 91
+- R2:
+    RMSE = 3.038058e+03
+    MAE  = 2.288733e+03
+    MAPE = 20.409 %
+- C:
+    RMSE = 4.305949e-07
+    MAE  = 3.456373e-07
+    MAPE = 22.273 %
+
+[Probabilistic evaluation]
+- R2:
+- C:
+
+[3] Sample-level prediction summary
+- R2:
+    true min/max/mean/std = 5.000000e+03 / 2.000000e+04 / 1.117958e+04 / 4.818882e+03
+    pred min/max/mean/std = 5.083670e+03 / 1.956490e+04 / 1.017122e+04 / 3.228571e+03
+- C:
+    true min/max/mean/std = 8.000000e-07 / 3.200000e-06 / 1.681413e-06 / 7.174227e-07
+    pred min/max/mean/std = 8.384973e-07 / 3.049291e-06 / 1.671264e-06 / 5.246159e-07
+
+[4] Aggregated prediction summary
+- R2:
+    true min/max/mean/std = 5.000000e+03 / 2.000000e+04 / 1.107411e+04 / 4.812438e+03
+    pred min/max/mean/std = 5.556253e+03 / 1.786019e+04 / 1.018212e+04 / 3.104085e+03
+- C:
+    true min/max/mean/std = 8.000000e-07 / 3.200000e-06 / 1.695799e-06 / 7.293312e-07
+    pred min/max/mean/std = 9.318723e-07 / 2.739719e-06 / 1.664643e-06 / 4.977638e-07
+
+
+
+FFT
+(torch_gpu) pc_ai@PCAI:/mnt/c/Users/samue/Documents/AI-Assisted_Implementation_of_a_Digital-Twin/Digital_Twin_Calibration/src/dtcalib/deep_learning$ python3 inference.py   --checkpoint models/mlp_2026-04-30_10-42-06_best.pth   --root-dir ../../../data/LP_DATASET_R1_R2_C   --split-json ./splits/rc_r1r2c_nested_fold0.json   --device cuda   --aggregate mean
+Checkpoint : models/mlp_2026-04-30_10-42-06_best.pth
+Root dir   : ../../../data/LP_DATASET_R1_R2_C
+Split JSON : splits/rc_r1r2c_nested_fold0.json
+Device     : cuda
+Aggregate  : mean
+/mnt/c/Users/samue/Documents/AI-Assisted_Implementation_of_a_Digital-Twin/Digital_Twin_Calibration/src/dtcalib/calibration.py:876: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  ckpt = torch.load(checkpoint_path, map_location="cpu")
+Calibrated params : ('R2', 'C')
+Transform map     : {'R2': 'log', 'C': 'log'}
+n_train=25600 | n_val=6400 | n_test=8000
+
+[1] Sample-level metrics
+- R2:
+    RMSE = 3.137855e+03
+    MAE  = 2.362495e+03
+    MAPE = 21.312 %
+- C:
+    RMSE = 4.394343e-07
+    MAE  = 3.452005e-07
+    MAPE = 22.631 %
+
+[2] Aggregated metrics by true parameter combination
+- Aggregation = mean
+- #groups     = 91
+- R2:
+    RMSE = 2.906827e+03
+    MAE  = 2.210202e+03
+    MAPE = 20.270 %
+- C:
+    RMSE = 4.198360e-07
+    MAE  = 3.326423e-07
+    MAPE = 21.336 %
+
+[Probabilistic evaluation]
+- R2:
+- C:
+
+[3] Sample-level prediction summary
+- R2:
+    true min/max/mean/std = 5.000000e+03 / 2.000000e+04 / 1.117958e+04 / 4.818882e+03
+    pred min/max/mean/std = 5.060813e+03 / 1.976143e+04 / 1.044609e+04 / 3.602067e+03
+- C:
+    true min/max/mean/std = 8.000000e-07 / 3.200000e-06 / 1.681413e-06 / 7.174227e-07
+    pred min/max/mean/std = 7.896961e-07 / 3.150036e-06 / 1.673951e-06 / 5.752305e-07
+
+[4] Aggregated prediction summary
+- R2:
+    true min/max/mean/std = 5.000000e+03 / 2.000000e+04 / 1.107411e+04 / 4.812438e+03
+    pred min/max/mean/std = 5.440825e+03 / 1.853978e+04 / 1.045793e+04 / 3.453273e+03
+- C:
+    true min/max/mean/std = 8.000000e-07 / 3.200000e-06 / 1.695799e-06 / 7.293312e-07
+    pred min/max/mean/std = 8.569728e-07 / 2.955348e-06 / 1.668022e-06 / 5.496411e-07
+
+
+
+FFT_grouped
+(torch_gpu) pc_ai@PCAI:/mnt/c/Users/samue/Documents/AI-Assisted_Implementation_of_a_Digital-Twin/Digital_Twin_Calibration/src/dtcalib/deep_learning$ python3 inference.py   --checkpoint models/mlp_2026-04-30_10-58-20_best.pth   --root-dir ../../../data/LP_DATASET_R1_R2_C   --split-json ./splits/rc_r1r2c_fft_grouped_fold0.json   --device cuda   --aggregate mean
+Checkpoint : models/mlp_2026-04-30_10-58-20_best.pth
+Root dir   : ../../../data/LP_DATASET_R1_R2_C
+Split JSON : splits/rc_r1r2c_fft_grouped_fold0.json
+Device     : cuda
+Aggregate  : mean
+/mnt/c/Users/samue/Documents/AI-Assisted_Implementation_of_a_Digital-Twin/Digital_Twin_Calibration/src/dtcalib/calibration.py:876: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  ckpt = torch.load(checkpoint_path, map_location="cpu")
+Calibrated params : ('R2', 'C')
+Transform map     : {'R2': 'log', 'C': 'log'}
+n_train=640 | n_val=160 | n_test=200
+
+[1] Sample-level metrics
+- R2:
+    RMSE = 2.683835e+03
+    MAE  = 2.072295e+03
+    MAPE = 20.710 %
+- C:
+    RMSE = 4.483202e-07
+    MAE  = 3.369075e-07
+    MAPE = 19.846 %
+
+[2] Aggregated metrics by true parameter combination
+- Aggregation = mean
+- #groups     = 91
+- R2:
+    RMSE = 2.567464e+03
+    MAE  = 2.025169e+03
+    MAPE = 19.733 %
+- C:
+    RMSE = 4.176179e-07
+    MAE  = 3.261531e-07
+    MAPE = 19.908 %
+
+[Probabilistic evaluation]
+- R2:
+- C:
+
+[3] Sample-level prediction summary
+- R2:
+    true min/max/mean/std = 5.000000e+03 / 2.000000e+04 / 1.091359e+04 / 4.812944e+03
+    pred min/max/mean/std = 4.965580e+03 / 1.967481e+04 / 1.073329e+04 / 3.745834e+03
+- C:
+    true min/max/mean/std = 8.000000e-07 / 3.200000e-06 / 1.789482e-06 / 7.557131e-07
+    pred min/max/mean/std = 7.779722e-07 / 3.179812e-06 / 1.711860e-06 / 6.144968e-07
+
+[4] Aggregated prediction summary
+- R2:
+    true min/max/mean/std = 5.000000e+03 / 2.000000e+04 / 1.099145e+04 / 4.783530e+03
+    pred min/max/mean/std = 5.318254e+03 / 1.967481e+04 / 1.067864e+04 / 3.474123e+03
+- C:
+    true min/max/mean/std = 8.000000e-07 / 3.200000e-06 / 1.759750e-06 / 7.481065e-07
+    pred min/max/mean/std = 7.996727e-07 / 3.179812e-06 / 1.697831e-06 / 5.702675e-07
+
+
+
+
+Time_fft
+(torch_gpu) pc_ai@PCAI:/mnt/c/Users/samue/Documents/AI-Assisted_Implementation_of_a_Digital-Twin/Digital_Twin_Calibration/src/dtcalib/deep_learning$ python3 inference.py   --checkpoint models/mlp_2026-04-30_11-18-09_best.pth   --root-dir ../../../data/LP_DATASET_R1_R2_C   --split-json ./splits/rc_r1r2c_nested_fold0.json   --device cuda   --aggregate mean
+Checkpoint : models/mlp_2026-04-30_11-18-09_best.pth
+Root dir   : ../../../data/LP_DATASET_R1_R2_C
+Split JSON : splits/rc_r1r2c_nested_fold0.json
+Device     : cuda
+Aggregate  : mean
+/mnt/c/Users/samue/Documents/AI-Assisted_Implementation_of_a_Digital-Twin/Digital_Twin_Calibration/src/dtcalib/calibration.py:876: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  ckpt = torch.load(checkpoint_path, map_location="cpu")
+Calibrated params : ('R2', 'C')
+Transform map     : {'R2': 'log', 'C': 'log'}
+n_train=25600 | n_val=6400 | n_test=8000
+
+[1] Sample-level metrics
+- R2:
+    RMSE = 3.186977e+03
+    MAE  = 2.409095e+03
+    MAPE = 21.654 %
+- C:
+    RMSE = 4.453082e-07
+    MAE  = 3.487452e-07
+    MAPE = 22.689 %
+
+[2] Aggregated metrics by true parameter combination
+- Aggregation = mean
+- #groups     = 91
+- R2:
+    RMSE = 2.986253e+03
+    MAE  = 2.260718e+03
+    MAPE = 20.747 %
+- C:
+    RMSE = 4.353070e-07
+    MAE  = 3.467283e-07
+    MAPE = 21.847 %
+
+[Probabilistic evaluation]
+- R2:
+- C:
+
+[3] Sample-level prediction summary
+- R2:
+    true min/max/mean/std = 5.000000e+03 / 2.000000e+04 / 1.117958e+04 / 4.818882e+03
+    pred min/max/mean/std = 5.212759e+03 / 1.927797e+04 / 1.036760e+04 / 3.208925e+03
+- C:
+    true min/max/mean/std = 8.000000e-07 / 3.200000e-06 / 1.681413e-06 / 7.174227e-07
+    pred min/max/mean/std = 8.350731e-07 / 2.889996e-06 / 1.637704e-06 / 4.976082e-07
+
+[4] Aggregated prediction summary
+- R2:
+    true min/max/mean/std = 5.000000e+03 / 2.000000e+04 / 1.107411e+04 / 4.812438e+03
+    pred min/max/mean/std = 5.591964e+03 / 1.741714e+04 / 1.038270e+04 / 3.066022e+03
+- C:
+    true min/max/mean/std = 8.000000e-07 / 3.200000e-06 / 1.695799e-06 / 7.293312e-07
+    pred min/max/mean/std = 9.026030e-07 / 2.681000e-06 / 1.631097e-06 / 4.728108e-07
+
+[5] CSV saved (sample-level) : models/mlp_2026-04-30_11-18-09_best_test_predictions_per_sample.csv
+[5] CSV saved (group-level)  : models/mlp_2026-04-30_11-18-09_best_test_predictions_per_group_mean.csv

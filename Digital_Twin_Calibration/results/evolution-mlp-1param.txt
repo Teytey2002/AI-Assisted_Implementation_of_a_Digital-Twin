@@ -1,0 +1,173 @@
+Time
+(torch_gpu) pc_ai@PCAI:/mnt/c/Users/samue/Documents/AI-Assisted_Implementation_of_a_Digital-Twin/Digital_Twin_Calibration/src/dtcalib/deep_learning$ python3 inference.py   --checkpoint models/mlp_2026-04-30_11-37-44_best.pth   --root-dir ../../../data/LP_DATASET_R1_R2_C   --split-json ./splits/rc_r1r2c_nested_fold0.json   --device cuda   --aggregate mean
+Checkpoint : models/mlp_2026-04-30_11-37-44_best.pth
+Root dir   : ../../../data/LP_DATASET_R1_R2_C
+Split JSON : splits/rc_r1r2c_nested_fold0.json
+Device     : cuda
+Aggregate  : mean
+/mnt/c/Users/samue/Documents/AI-Assisted_Implementation_of_a_Digital-Twin/Digital_Twin_Calibration/src/dtcalib/calibration.py:876: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  ckpt = torch.load(checkpoint_path, map_location="cpu")
+Calibrated params : ('C',)
+Transform map     : {'C': 'log'}
+n_train=25600 | n_val=6400 | n_test=8000
+
+[1] Sample-level metrics
+- C:
+    RMSE = 4.516797e-07
+    MAE  = 3.577689e-07
+    MAPE = 23.050 %
+
+[2] Aggregated metrics by true parameter combination
+- Aggregation = mean
+- #groups     = 10
+- C:
+    RMSE = 3.308320e-07
+    MAE  = 2.674630e-07
+    MAPE = 16.333 %
+
+[Probabilistic evaluation]
+- C:
+
+[3] Sample-level prediction summary
+- C:
+    true min/max/mean/std = 8.000000e-07 / 3.200000e-06 / 1.681413e-06 / 7.174227e-07
+    pred min/max/mean/std = 8.257898e-07 / 2.960162e-06 / 1.648585e-06 / 5.446402e-07
+
+[4] Aggregated prediction summary
+- C:
+    true min/max/mean/std = 8.000000e-07 / 3.200000e-06 / 1.761190e-06 / 7.635687e-07
+    pred min/max/mean/std = 1.085884e-06 / 2.454950e-06 / 1.694343e-06 / 4.481861e-07
+
+
+
+FFT
+(torch_gpu) pc_ai@PCAI:/mnt/c/Users/samue/Documents/AI-Assisted_Implementation_of_a_Digital-Twin/Digital_Twin_Calibration/src/dtcalib/deep_learning$ python3 inference.py   --checkpoint models/mlp_2026-04-30_12-05-16_best.pth   --root-dir ../../../data/LP_DATASET_R1_R2_C   --split-json ./splits/rc_r1r2c_nested_fold0.json   --device cuda   --aggregate mean
+Checkpoint : models/mlp_2026-04-30_12-05-16_best.pth
+Root dir   : ../../../data/LP_DATASET_R1_R2_C
+Split JSON : splits/rc_r1r2c_nested_fold0.json
+Device     : cuda
+Aggregate  : mean
+/mnt/c/Users/samue/Documents/AI-Assisted_Implementation_of_a_Digital-Twin/Digital_Twin_Calibration/src/dtcalib/calibration.py:876: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  ckpt = torch.load(checkpoint_path, map_location="cpu")
+Calibrated params : ('C',)
+Transform map     : {'C': 'log'}
+n_train=25600 | n_val=6400 | n_test=8000
+
+[1] Sample-level metrics
+- C:
+    RMSE = 4.396412e-07
+    MAE  = 3.467971e-07
+    MAPE = 22.756 %
+
+[2] Aggregated metrics by true parameter combination
+- Aggregation = mean
+- #groups     = 10
+- C:
+    RMSE = 2.715076e-07
+    MAE  = 2.266349e-07
+    MAPE = 14.827 %
+
+[Probabilistic evaluation]
+- C:
+
+[3] Sample-level prediction summary
+- C:
+    true min/max/mean/std = 8.000000e-07 / 3.200000e-06 / 1.681413e-06 / 7.174227e-07
+    pred min/max/mean/std = 8.032136e-07 / 3.157990e-06 / 1.690647e-06 / 5.959623e-07
+
+[4] Aggregated prediction summary
+- C:
+    true min/max/mean/std = 8.000000e-07 / 3.200000e-06 / 1.761190e-06 / 7.635687e-07
+    pred min/max/mean/std = 1.073707e-06 / 2.625901e-06 / 1.742915e-06 / 5.005093e-07
+
+
+
+
+FFT_Grouped
+(torch_gpu) pc_ai@PCAI:/mnt/c/Users/samue/Documents/AI-Assisted_Implementation_of_a_Digital-Twin/Digital_Twin_Calibration/src/dtcalib/deep_learning$ python3 inference.py   --checkpoint models/mlp_2026-04-30_12-15-21_best.pth   --root-dir ../../../data/LP_DATASET_R1_R2_C   --split-json ./splits/rc_r1r2c_fft_grouped_fold0.json   --device cuda   --aggregate mean
+Checkpoint : models/mlp_2026-04-30_12-15-21_best.pth
+Root dir   : ../../../data/LP_DATASET_R1_R2_C
+Split JSON : splits/rc_r1r2c_fft_grouped_fold0.json
+Device     : cuda
+Aggregate  : mean
+/mnt/c/Users/samue/Documents/AI-Assisted_Implementation_of_a_Digital-Twin/Digital_Twin_Calibration/src/dtcalib/calibration.py:876: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  ckpt = torch.load(checkpoint_path, map_location="cpu")
+Calibrated params : ('C',)
+Transform map     : {'C': 'log'}
+n_train=640 | n_val=160 | n_test=200
+
+[1] Sample-level metrics
+- C:
+    RMSE = 4.519547e-07
+    MAE  = 3.385354e-07
+    MAPE = 19.850 %
+
+[2] Aggregated metrics by true parameter combination
+- Aggregation = mean
+- #groups     = 10
+- C:
+    RMSE = 3.146861e-07
+    MAE  = 2.258954e-07
+    MAPE = 13.279 %
+
+[Probabilistic evaluation]
+- C:
+
+[3] Sample-level prediction summary
+- C:
+    true min/max/mean/std = 8.000000e-07 / 3.200000e-06 / 1.789482e-06 / 7.557131e-07
+    pred min/max/mean/std = 7.900811e-07 / 3.065613e-06 / 1.694685e-06 / 5.842557e-07
+
+[4] Aggregated prediction summary
+- C:
+    true min/max/mean/std = 8.000000e-07 / 3.200000e-06 / 1.761190e-06 / 7.635687e-07
+    pred min/max/mean/std = 1.062926e-06 / 2.402747e-06 / 1.673630e-06 / 4.818836e-07
+
+[5] CSV saved (sample-level) : models/mlp_2026-04-30_12-15-21_best_test_predictions_per_sample.csv
+[5] CSV saved (group-level)  : models/mlp_2026-04-30_12-15-21_best_test_predictions_per_group_mean.csv
+
+
+
+
+Time_FFT
+(torch_gpu) pc_ai@PCAI:/mnt/c/Users/samue/Documents/AI-Assisted_Implementation_of_a_Digital-Twin/Digital_Twin_Calibration/src/dtcalib/deep_learning$ python3 inference.py   --checkpoint models/mlp_2026-04-30_13-33-11_best.pth   --root-dir ../../../data/LP_DATASET_R1_R2_C   --split-json ./splits/rc_r1r2c_nested_fold0.json   --device cuda   --aggregate mean
+Checkpoint : models/mlp_2026-04-30_13-33-11_best.pth
+Root dir   : ../../../data/LP_DATASET_R1_R2_C
+Split JSON : splits/rc_r1r2c_nested_fold0.json
+Device     : cuda
+Aggregate  : mean
+/mnt/c/Users/samue/Documents/AI-Assisted_Implementation_of_a_Digital-Twin/Digital_Twin_Calibration/src/dtcalib/calibration.py:876: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  ckpt = torch.load(checkpoint_path, map_location="cpu")
+Calibrated params : ('C',)
+Transform map     : {'C': 'log'}
+n_train=25600 | n_val=6400 | n_test=8000
+
+[1] Sample-level metrics
+- C:
+    RMSE = 4.415780e-07
+    MAE  = 3.485660e-07
+    MAPE = 22.916 %
+
+[2] Aggregated metrics by true parameter combination
+- Aggregation = mean
+- #groups     = 10
+- C:
+    RMSE = 3.271216e-07
+    MAE  = 2.720109e-07
+    MAPE = 17.192 %
+
+[Probabilistic evaluation]
+- C:
+
+[3] Sample-level prediction summary
+- C:
+    true min/max/mean/std = 8.000000e-07 / 3.200000e-06 / 1.681413e-06 / 7.174227e-07
+    pred min/max/mean/std = 8.134183e-07 / 3.267866e-06 / 1.668525e-06 / 5.326268e-07
+
+[4] Aggregated prediction summary
+- C:
+    true min/max/mean/std = 8.000000e-07 / 3.200000e-06 / 1.761190e-06 / 7.635687e-07
+    pred min/max/mean/std = 1.111816e-06 / 2.497296e-06 / 1.714805e-06 / 4.461825e-07
+
+[5] CSV saved (sample-level) : models/mlp_2026-04-30_13-33-11_best_test_predictions_per_sample.csv
+[5] CSV saved (group-level)  : models/mlp_2026-04-30_13-33-11_best_test_predictions_per_group_mean.csv
