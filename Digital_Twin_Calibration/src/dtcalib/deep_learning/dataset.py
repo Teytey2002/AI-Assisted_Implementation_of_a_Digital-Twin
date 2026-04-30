@@ -95,7 +95,7 @@ class RCSignalDataset(Dataset):
         self.fft_top_k = int(fft_top_k)
 
         if self.domain not in {"time", "fft", "fft_grouped", "time_fft"}:
-            raise ValueError("domain must be one of {'time', 'fft', 'fft_grouped'}.")
+            raise ValueError("domain must be one of {'time', 'fft', 'fft_grouped', 'time_fft'}.")
 
         self.samples: list[tuple[Path, Dict[str, float]]] = []
         self.grouped_samples: list[dict[str, Any]] = []

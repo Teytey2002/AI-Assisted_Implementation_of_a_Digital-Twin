@@ -96,7 +96,7 @@ def run_inference(
         root_dir,
         target_spec=target_spec,
         manifest_name=manifest_name,
-        domain="time_fft",
+        domain="time_fft"
     )
 
     dataset.set_normalization(

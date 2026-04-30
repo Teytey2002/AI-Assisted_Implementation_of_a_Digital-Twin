@@ -59,6 +59,7 @@ def build_model(
     model_name: str,
     output_dim: int,
     input_channels: int = 3,
+    input_dim: int = 24,
 ) -> tuple[nn.Module, str, str]:
     model_name = model_name.lower()
 
@@ -75,7 +76,7 @@ def build_model(
         ), "probabilistic", "ProbabilisticRCInverseCNN"
 
     if model_name == "mlp":
-        return RCInverseMLP(input_dim=24, output_dim=output_dim), "deterministic", "RCInverseMLP"
+        return RCInverseMLP(input_dim=input_dim, output_dim=output_dim), "deterministic", "RCInverseMLP"
 
     raise ValueError(
         f"Unknown model '{model_name}'. Supported values: 'cnn', 'prob_cnn', 'mlp'."
@@ -135,12 +136,12 @@ def train(
     max_epochs = 300
 
     # Modified if needed to train the model to predict differents number of parameters
-    calibrated_params = ("R1", "R2", "C")
-    transform_map = {"R1": "log", "R2": "log", "C": "log"}
+    #calibrated_params = ("R1", "R2", "C")
+    #transform_map = {"R1": "log", "R2": "log", "C": "log"}
     #calibrated_params = ("R2", "C")
     #transform_map = {"R2": "log", "C": "log"}
-    #calibrated_params = ("C",)
-    #transform_map = {"C": "log"}
+    calibrated_params = ("C",)
+    transform_map = {"C": "log"}
     target_spec = TargetSpec(calibrated_params=calibrated_params, transform_map=transform_map)
 
 
@@ -214,8 +215,9 @@ def train(
     # -------------------------
     example_x, _ = dataset[train_idx[0]]
     input_channels = int(example_x.shape[0])
+    input_dim = int(example_x.numel())
 
-    model, model_mode, model_class_name = build_model(model_name, output_dim=len(calibrated_params), input_channels=input_channels)
+    model, model_mode, model_class_name = build_model(model_name, output_dim=len(calibrated_params), input_channels=input_channels, input_dim=input_dim)
     model = model.to(device)
 
     optimizer = optim.Adam(

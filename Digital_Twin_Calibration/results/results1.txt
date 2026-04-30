@@ -294,7 +294,7 @@ n_train=3200 | n_val=799 | n_test=1000
 
 
 
-
+ICi c'est quand on test de train sur le big dataset ou on fait tout varier 
 (torch_gpu) xxxx@TeyteyCase:/mnt/c/Users/theod/OneDrive/Documents/ULB/Ma2/TFE/AI-Assisted_Implementation_of_a_Digital-Twin/Digital_Twin_Calibration/src/dtcalib/deep_learning$ python3 inference.py   --checkpoint models/cnn_2026-04-23_14-57-22_best.pth   --root-dir ../../../data/LP_DATASET_R1_R2_C   --split-json ./splits/rc_r1r2c_nested_fold0.json   
 --device cuda   --aggregate mean
 Checkpoint : models/cnn_2026-04-23_14-57-22_best.pth

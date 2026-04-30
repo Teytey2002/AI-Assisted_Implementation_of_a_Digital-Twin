@@ -1,0 +1,170 @@
+Time
+(torch_gpu) xxxx@TeyteyCase:/mnt/c/Users/theod/OneDrive/Documents/ULB/Ma2/TFE/AI-Assisted_Implementation_of_a_Digital-Twin/Digital_Twin_Calibration/src/dtcalib/deep_learning$ python3 inference.py   --checkpoint models/cnn_2026-04-30_11-40-29_best.pth   --root-dir ../../../data/LP_DATASET_R1_R2_C   --split-json ./splits/rc_r1r2c_nested_fold0.json   --device cuda   --aggregate mean
+Checkpoint : models/cnn_2026-04-30_11-40-29_best.pth
+Root dir   : ../../../data/LP_DATASET_R1_R2_C
+Split JSON : splits/rc_r1r2c_nested_fold0.json
+Device     : cuda
+Aggregate  : mean
+Calibrated params : ('C',)
+Transform map     : {'C': 'log'}
+n_train=25600 | n_val=6400 | n_test=8000
+
+[1] Sample-level metrics
+- C:
+    RMSE = 4.369349e-07
+    MAE  = 3.430533e-07
+    MAPE = 22.445 %
+
+[2] Aggregated metrics by true parameter combination
+- Aggregation = mean
+- #groups     = 10
+- C:
+    RMSE = 2.663594e-07
+    MAE  = 2.213195e-07
+    MAPE = 14.459 %
+
+[Probabilistic evaluation]
+- C:
+
+[3] Sample-level prediction summary
+- C:
+    true min/max/mean/std = 8.000000e-07 / 3.200000e-06 / 1.681413e-06 / 7.174227e-07
+    pred min/max/mean/std = 8.083669e-07 / 3.297919e-06 / 1.689204e-06 / 5.996542e-07
+
+[4] Aggregated prediction summary
+- C:
+    true min/max/mean/std = 8.000000e-07 / 3.200000e-06 / 1.761190e-06 / 7.635687e-07
+    pred min/max/mean/std = 1.067370e-06 / 2.635896e-06 / 1.741904e-06 / 5.053034e-07
+
+[5] CSV saved (sample-level) : models/cnn_2026-04-30_11-40-29_best_test_predictions_per_sample.csv
+[5] CSV saved (group-level)  : models/cnn_2026-04-30_11-40-29_best_test_predictions_per_group_mean.csv
+
+
+
+FFT
+(torch_gpu) xxxx@TeyteyCase:/mnt/c/Users/theod/OneDrive/Documents/ULB/Ma2/TFE/AI-Assisted_Implementation_of_a_Digital-Twin/Digital_Twin_Calibration/src/dtcalib/deep_learning$ python3 inference.py   --checkpoint models/cnn_2026-04-30_12-02-21_best.pth   --root-dir ../../../data/LP_DATASET_R1_R2_C   --split-json ./splits/rc_r1r2c_nested_fold0.json   --device cuda   --aggregate mean
+Checkpoint : models/cnn_2026-04-30_12-02-21_best.pth
+Root dir   : ../../../data/LP_DATASET_R1_R2_C
+Split JSON : splits/rc_r1r2c_nested_fold0.json
+Device     : cuda
+Aggregate  : mean
+Calibrated params : ('C',)
+Transform map     : {'C': 'log'}
+n_train=25600 | n_val=6400 | n_test=8000
+
+[1] Sample-level metrics
+- C:
+    RMSE = 4.413070e-07
+    MAE  = 3.470506e-07
+    MAPE = 22.814 %
+
+[2] Aggregated metrics by true parameter combination
+- Aggregation = mean
+- #groups     = 10
+- C:
+    RMSE = 2.699786e-07
+    MAE  = 2.260141e-07
+    MAPE = 14.843 %
+
+[Probabilistic evaluation]
+- C:
+
+[3] Sample-level prediction summary
+- C:
+    true min/max/mean/std = 8.000000e-07 / 3.200000e-06 / 1.681413e-06 / 7.174227e-07
+    pred min/max/mean/std = 8.073322e-07 / 3.165712e-06 / 1.693866e-06 / 5.993921e-07
+
+[4] Aggregated prediction summary
+- C:
+    true min/max/mean/std = 8.000000e-07 / 3.200000e-06 / 1.761190e-06 / 7.635687e-07
+    pred min/max/mean/std = 1.071390e-06 / 2.632854e-06 / 1.746748e-06 / 5.027562e-07
+
+[5] CSV saved (sample-level) : models/cnn_2026-04-30_12-02-21_best_test_predictions_per_sample.csv
+[5] CSV saved (group-level)  : models/cnn_2026-04-30_12-02-21_best_test_predictions_per_group_mean.csv
+
+
+
+
+FFT_grouped
+(torch_gpu) xxxx@TeyteyCase:/mnt/c/Users/theod/OneDrive/Documents/ULB/Ma2/TFE/AI-Assisted_Implementation_of_a_Digital-Twin/Digital_Twin_Calibration/src/dtcalib/deep_learning$ python3 inference.py   --checkpoint models/cnn_2026-04-30_12-13-12_best.pth   --root-dir ../../../data/LP_DATASET_R1_R2_C   --split-json ./splits/rc_r1r2c_fft_grouped_fold0.json   --device cuda   --aggregate mean
+Checkpoint : models/cnn_2026-04-30_12-13-12_best.pth
+Root dir   : ../../../data/LP_DATASET_R1_R2_C
+Split JSON : splits/rc_r1r2c_fft_grouped_fold0.json
+Device     : cuda
+Aggregate  : mean
+Calibrated params : ('C',)
+Transform map     : {'C': 'log'}
+n_train=640 | n_val=160 | n_test=200
+
+[1] Sample-level metrics
+- C:
+    RMSE = 4.511452e-07
+    MAE  = 3.405047e-07
+    MAPE = 19.683 %
+
+[2] Aggregated metrics by true parameter combination
+- Aggregation = mean
+- #groups     = 10
+- C:
+    RMSE = 2.900126e-07
+    MAE  = 2.010448e-07
+    MAPE = 11.264 %
+
+[Probabilistic evaluation]
+- C:
+
+[3] Sample-level prediction summary
+- C:
+    true min/max/mean/std = 8.000000e-07 / 3.200000e-06 / 1.789482e-06 / 7.557131e-07
+    pred min/max/mean/std = 7.603514e-07 / 3.085456e-06 / 1.684378e-06 / 6.264530e-07
+
+[4] Aggregated prediction summary
+- C:
+    true min/max/mean/std = 8.000000e-07 / 3.200000e-06 / 1.761190e-06 / 7.635687e-07
+    pred min/max/mean/std = 1.010094e-06 / 2.433886e-06 / 1.660809e-06 / 5.176815e-07
+
+[5] CSV saved (sample-level) : models/cnn_2026-04-30_12-13-12_best_test_predictions_per_sample.csv
+[5] CSV saved (group-level)  : models/cnn_2026-04-30_12-13-12_best_test_predictions_per_group_mean.csv
+
+
+
+Time_FFT
+(torch_gpu) xxxx@TeyteyCase:/mnt/c/Users/theod/OneDrive/Documents/ULB/Ma2/TFE/AI-Assisted_Implementation_of_a_Digital-Twin/Digital_Twin_Calibration/src/dtcalib/deep_learning$ python3 inference.py   --checkpoint models/cnn_2026-04-30_13-34-47_best.pth   --root-dir ../../../data/LP_DATASET_R1_R2_C   --split-json ./splits/rc_r1r2c_nested_fold0.json   --device cuda   --aggregate mean
+Checkpoint : models/cnn_2026-04-30_13-34-47_best.pth
+Root dir   : ../../../data/LP_DATASET_R1_R2_C
+Split JSON : splits/rc_r1r2c_nested_fold0.json
+Device     : cuda
+Aggregate  : mean
+Calibrated params : ('C',)
+Transform map     : {'C': 'log'}
+n_train=25600 | n_val=6400 | n_test=8000
+
+[1] Sample-level metrics
+- C:
+    RMSE = 4.346487e-07
+    MAE  = 3.406019e-07
+    MAPE = 22.170 %
+
+[2] Aggregated metrics by true parameter combination
+- Aggregation = mean
+- #groups     = 10
+- C:
+    RMSE = 2.658182e-07
+    MAE  = 2.223940e-07
+    MAPE = 14.353 %
+
+[Probabilistic evaluation]
+- C:
+
+[3] Sample-level prediction summary
+- C:
+    true min/max/mean/std = 8.000000e-07 / 3.200000e-06 / 1.681413e-06 / 7.174227e-07
+    pred min/max/mean/std = 7.173799e-07 / 3.300180e-06 / 1.682203e-06 / 5.989656e-07
+
+[4] Aggregated prediction summary
+- C:
+    true min/max/mean/std = 8.000000e-07 / 3.200000e-06 / 1.761190e-06 / 7.635687e-07
+    pred min/max/mean/std = 1.057876e-06 / 2.637961e-06 / 1.735656e-06 / 5.068499e-07
+
+[5] CSV saved (sample-level) : models/cnn_2026-04-30_13-34-47_best_test_predictions_per_sample.csv
+[5] CSV saved (group-level)  : models/cnn_2026-04-30_13-34-47_best_test_predictions_per_group_mean.csv
