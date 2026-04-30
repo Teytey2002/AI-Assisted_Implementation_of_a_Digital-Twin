@@ -96,7 +96,7 @@ def run_inference(
         root_dir,
         target_spec=target_spec,
         manifest_name=manifest_name,
-        domain="time_fft"
+        domain="time"
     )
 
     dataset.set_normalization(
@@ -149,11 +149,6 @@ def run_inference(
         selected_rmse = None
 
         if hybrid_select and samples_vec is not None:
-            df_sig = pd.read_csv(csv_path)
-            time = df_sig.iloc[:, 0].to_numpy(dtype=np.float64)
-            vin = df_sig.iloc[:, 1].to_numpy(dtype=np.float64)
-            vout = df_sig.iloc[:, 2].to_numpy(dtype=np.float64)
-
             fixed_params = {
                 p: float(param_dict[p])
                 for p in ("R1", "R2", "C")
@@ -171,25 +166,74 @@ def run_inference(
             best_score = float("inf")
             best_theta = None
 
-            for theta_candidate in candidate_samples:
-                try:
-                    yhat = simulator.simulate(
-                        time,
-                        vin,
-                        np.asarray(theta_candidate, dtype=np.float64),
-                    ).y
-                    score = Metrics.rmse(vout, yhat)
-                except Exception:
-                    continue
+            # ------------------------------------------------------------
+            # Case 1: fft_grouped
+            # One candidate theta must be evaluated on all frequency CSVs
+            # belonging to the same physical group.
+            # ------------------------------------------------------------
+            if dataset.domain == "fft_grouped":
+                eval_csv_paths = group_sample["csv_paths"]
 
-                if score < best_score:
-                    best_score = float(score)
-                    best_theta = np.asarray(theta_candidate, dtype=np.float64)
+                for theta_candidate in candidate_samples:
+                    candidate_scores = []
+
+                    for eval_csv_path in eval_csv_paths:
+                        try:
+                            df_sig = pd.read_csv(eval_csv_path)
+                            time = df_sig.iloc[:, 0].to_numpy(dtype=np.float64)
+                            vin = df_sig.iloc[:, 1].to_numpy(dtype=np.float64)
+                            vout = df_sig.iloc[:, 2].to_numpy(dtype=np.float64)
+
+                            yhat = simulator.simulate(
+                                time,
+                                vin,
+                                np.asarray(theta_candidate, dtype=np.float64),
+                            ).y
+
+                            candidate_scores.append(Metrics.rmse(vout, yhat))
+
+                        except Exception:
+                            continue
+
+                    if len(candidate_scores) == 0:
+                        continue
+
+                    score = float(np.mean(candidate_scores))
+
+                    if score < best_score:
+                        best_score = score
+                        best_theta = np.asarray(theta_candidate, dtype=np.float64)
+
+            # ------------------------------------------------------------
+            # Case 2: time / fft / time_fft
+            # One sample corresponds to one CSV experiment.
+            # ------------------------------------------------------------
+            else:
+                df_sig = pd.read_csv(csv_path)
+                time = df_sig.iloc[:, 0].to_numpy(dtype=np.float64)
+                vin = df_sig.iloc[:, 1].to_numpy(dtype=np.float64)
+                vout = df_sig.iloc[:, 2].to_numpy(dtype=np.float64)
+
+                for theta_candidate in candidate_samples:
+                    try:
+                        yhat = simulator.simulate(
+                            time,
+                            vin,
+                            np.asarray(theta_candidate, dtype=np.float64),
+                        ).y
+
+                        score = Metrics.rmse(vout, yhat)
+
+                    except Exception:
+                        continue
+
+                    if score < best_score:
+                        best_score = float(score)
+                        best_theta = np.asarray(theta_candidate, dtype=np.float64)
 
             if best_theta is not None:
                 selected_vec = best_theta
                 selected_rmse = best_score
-
         row: dict[str, Any] = {
             "index": int(idx),
             "sample_name": sample_name,
