@@ -1,0 +1,304 @@
+Time
+(torch_gpu) pc_ai@PCAI:/mnt/c/Users/samue/Documents/AI-Assisted_Implementation_of_a_Digital-Twin/Digital_Twin_Calibration/src/dtcalib/deep_learning$ python3 inference.py   --checkpoint models/prob_cnn_2026-04-30_14-02-22_best.pth   --root-dir ../../../data/LP_DATASET_R1_R2_C   --split-json ./splits/rc_r1r2c_nested_fold0.json   --device cuda   --aggregate mean --n-samples 200 --hybrid-select --hybrid-n-candidates 200
+Checkpoint : models/prob_cnn_2026-04-30_14-02-22_best.pth
+Root dir   : ../../../data/LP_DATASET_R1_R2_C
+Split JSON : splits/rc_r1r2c_nested_fold0.json
+Device     : cuda
+Aggregate  : mean
+/mnt/c/Users/samue/Documents/AI-Assisted_Implementation_of_a_Digital-Twin/Digital_Twin_Calibration/src/dtcalib/calibration.py:876: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  ckpt = torch.load(checkpoint_path, map_location="cpu")
+Calibrated params : ('R2', 'C')
+Transform map     : {'R2': 'log', 'C': 'log'}
+n_train=25600 | n_val=6400 | n_test=8000
+
+[1] Sample-level metrics
+- R2:
+    RMSE = 3.071380e+03
+    MAE  = 2.275055e+03
+    MAPE = 20.329 %
+- C:
+    RMSE = 4.293237e-07
+    MAE  = 3.363945e-07
+    MAPE = 22.170 %
+
+[2] Aggregated metrics by true parameter combination
+- Aggregation = mean
+- #groups     = 91
+- R2:
+    RMSE = 2.902781e+03
+    MAE  = 2.174782e+03
+    MAPE = 19.744 %
+- C:
+    RMSE = 4.158497e-07
+    MAE  = 3.278768e-07
+    MAPE = 21.071 %
+
+[Probabilistic evaluation]
+- R2:
+    mean predicted std = 2.593525e+03
+    corr(abs_error, pred_std) = 0.5350
+    empirical 95% coverage = 0.982
+    mean 95% interval width = 9.854152e+03
+    Gaussian NLL norm = 0.719629
+- C:
+    mean predicted std = 4.262812e-07
+    corr(abs_error, pred_std) = 0.5632
+    empirical 95% coverage = 0.984
+    mean 95% interval width = 1.618006e-06
+    Gaussian NLL norm = 0.711783
+
+[Hybrid physics-based selection]
+- R2:
+    RMSE selected = 8.158492e+02
+    MAE selected  = 4.349020e+02
+    MAPE selected = 3.652 %
+- C:
+    RMSE selected = 6.733077e-08
+    MAE selected  = 3.710004e-08
+    MAPE selected = 2.369 %
+
+[3] Sample-level prediction summary
+- R2:
+    true min/max/mean/std = 5.000000e+03 / 2.000000e+04 / 1.117958e+04 / 4.818882e+03
+    pred min/max/mean/std = 4.863531e+03 / 1.995098e+04 / 1.037951e+04 / 3.544782e+03
+- C:
+    true min/max/mean/std = 8.000000e-07 / 3.200000e-06 / 1.681413e-06 / 7.174227e-07
+    pred min/max/mean/std = 8.346535e-07 / 3.107215e-06 / 1.681578e-06 / 5.667964e-07
+
+[4] Aggregated prediction summary
+- R2:
+    true min/max/mean/std = 5.000000e+03 / 2.000000e+04 / 1.107411e+04 / 4.812438e+03
+    pred min/max/mean/std = 5.239297e+03 / 1.923568e+04 / 1.039966e+04 / 3.444887e+03
+- C:
+    true min/max/mean/std = 8.000000e-07 / 3.200000e-06 / 1.695799e-06 / 7.293312e-07
+    pred min/max/mean/std = 8.801470e-07 / 2.963527e-06 / 1.674465e-06 / 5.497928e-07
+
+
+
+FFT
+(torch_gpu) pc_ai@PCAI:/mnt/c/Users/samue/Documents/AI-Assisted_Implementation_of_a_Digital-Twin/Digital_Twin_Calibration/src/dtcalib/deep_learning$ python3 inference.py   --checkpoint models/prob_cnn_2026-04-30_14-20-29_best.pth   --root-dir ../../../data/LP_DATASET_R1_R2_C   --split-json ./splits/rc_r1r2c_nested_fold0.json   --device cuda   --aggregate mean --n-samples 200 --hybrid-select --
+hybrid-n-candidates 200
+Checkpoint : models/prob_cnn_2026-04-30_14-20-29_best.pth
+Root dir   : ../../../data/LP_DATASET_R1_R2_C
+Split JSON : splits/rc_r1r2c_nested_fold0.json
+Device     : cuda
+Aggregate  : mean
+/mnt/c/Users/samue/Documents/AI-Assisted_Implementation_of_a_Digital-Twin/Digital_Twin_Calibration/src/dtcalib/calibration.py:876: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  ckpt = torch.load(checkpoint_path, map_location="cpu")
+Calibrated params : ('R2', 'C')
+Transform map     : {'R2': 'log', 'C': 'log'}
+n_train=25600 | n_val=6400 | n_test=8000
+
+[1] Sample-level metrics
+- R2:
+    RMSE = 3.071026e+03
+    MAE  = 2.304611e+03
+    MAPE = 20.961 %
+- C:
+    RMSE = 4.343368e-07
+    MAE  = 3.411709e-07
+    MAPE = 22.486 %
+
+[2] Aggregated metrics by true parameter combination
+- Aggregation = mean
+- #groups     = 91
+- R2:
+    RMSE = 2.886520e+03
+    MAE  = 2.199859e+03
+    MAPE = 20.277 %
+- C:
+    RMSE = 4.161718e-07
+    MAE  = 3.296601e-07
+    MAPE = 21.286 %
+
+[Probabilistic evaluation]
+- R2:
+    mean predicted std = 2.613619e+03
+    corr(abs_error, pred_std) = 0.5507
+    empirical 95% coverage = 0.986
+    mean 95% interval width = 9.917156e+03
+    Gaussian NLL norm = 0.705428
+- C:
+    mean predicted std = 4.285278e-07
+    corr(abs_error, pred_std) = 0.5663
+    empirical 95% coverage = 0.990
+    mean 95% interval width = 1.624561e-06
+    Gaussian NLL norm = 0.698823
+
+[Hybrid physics-based selection]
+- R2:
+    RMSE selected = 8.249949e+02
+    MAE selected  = 4.411346e+02
+    MAPE selected = 3.724 %
+- C:
+    RMSE selected = 6.677486e-08
+    MAE selected  = 3.669613e-08
+    MAPE selected = 2.292 %
+
+[3] Sample-level prediction summary
+- R2:
+    true min/max/mean/std = 5.000000e+03 / 2.000000e+04 / 1.117958e+04 / 4.818882e+03
+    pred min/max/mean/std = 5.080946e+03 / 2.054665e+04 / 1.055448e+04 / 3.704275e+03
+- C:
+    true min/max/mean/std = 8.000000e-07 / 3.200000e-06 / 1.681413e-06 / 7.174227e-07
+    pred min/max/mean/std = 8.034611e-07 / 3.185129e-06 / 1.687773e-06 / 5.801126e-07
+
+[4] Aggregated prediction summary
+- R2:
+    true min/max/mean/std = 5.000000e+03 / 2.000000e+04 / 1.107411e+04 / 4.812438e+03
+    pred min/max/mean/std = 5.235350e+03 / 1.970508e+04 / 1.057152e+04 / 3.594538e+03
+- C:
+    true min/max/mean/std = 8.000000e-07 / 3.200000e-06 / 1.695799e-06 / 7.293312e-07
+    pred min/max/mean/std = 8.258689e-07 / 3.059993e-06 / 1.681961e-06 / 5.610775e-07
+
+
+
+FFT_Grouped
+(torch_gpu) pc_ai@PCAI:/mnt/c/Users/samue/Documents/AI-Assisted_Implementation_of_a_Digital-Twin/Digital_Twin_Calibration/src/dtcalib/deep_learning$ python3 inference.py   --checkpoint models/prob_cnn_2026-04-30_15-45-04_best.pth   --root-dir ../../../data/LP_DATASET_R1_R2_C   --split-json ./splits/rc_r1r2c_fft_grouped_fold0.json   --device cuda   --aggregate mean --n-samples 200 --hybrid-sele
+ct --hybrid-n-candidates 200
+Checkpoint : models/prob_cnn_2026-04-30_15-45-04_best.pth
+Root dir   : ../../../data/LP_DATASET_R1_R2_C
+Split JSON : splits/rc_r1r2c_fft_grouped_fold0.json
+Device     : cuda
+Aggregate  : mean
+/mnt/c/Users/samue/Documents/AI-Assisted_Implementation_of_a_Digital-Twin/Digital_Twin_Calibration/src/dtcalib/calibration.py:876: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  ckpt = torch.load(checkpoint_path, map_location="cpu")
+Calibrated params : ('R2', 'C')
+Transform map     : {'R2': 'log', 'C': 'log'}
+n_train=640 | n_val=160 | n_test=200
+
+[1] Sample-level metrics
+- R2:
+    RMSE = 2.733597e+03
+    MAE  = 2.102092e+03
+    MAPE = 21.076 %
+- C:
+    RMSE = 4.500714e-07
+    MAE  = 3.388360e-07
+    MAPE = 19.750 %
+
+[2] Aggregated metrics by true parameter combination
+- Aggregation = mean
+- #groups     = 91
+- R2:
+    RMSE = 2.689234e+03
+    MAE  = 2.114436e+03
+    MAPE = 20.672 %
+- C:
+    RMSE = 4.139005e-07
+    MAE  = 3.262884e-07
+    MAPE = 19.657 %
+
+[Probabilistic evaluation]
+- R2:
+    mean predicted std = 2.611758e+03
+    corr(abs_error, pred_std) = 0.5021
+    empirical 95% coverage = 0.985
+    mean 95% interval width = 9.898064e+03
+    Gaussian NLL norm = 0.726156
+- C:
+    mean predicted std = 3.982425e-07
+    corr(abs_error, pred_std) = 0.4648
+    empirical 95% coverage = 0.970
+    mean 95% interval width = 1.512660e-06
+    Gaussian NLL norm = 0.693700
+
+[Hybrid physics-based selection]
+- R2:
+    RMSE selected = 3.981674e+02
+    MAE selected  = 2.648165e+02
+    MAPE selected = 2.592 %
+- C:
+    RMSE selected = 5.714906e-08
+    MAE selected  = 3.513512e-08
+    MAPE selected = 2.015 %
+
+[3] Sample-level prediction summary
+- R2:
+    true min/max/mean/std = 5.000000e+03 / 2.000000e+04 / 1.091359e+04 / 4.812944e+03
+    pred min/max/mean/std = 5.260407e+03 / 2.047857e+04 / 1.071947e+04 / 3.682056e+03
+- C:
+    true min/max/mean/std = 8.000000e-07 / 3.200000e-06 / 1.789482e-06 / 7.557131e-07
+    pred min/max/mean/std = 7.910333e-07 / 3.130860e-06 / 1.700824e-06 / 6.282304e-07
+
+[4] Aggregated prediction summary
+- R2:
+    true min/max/mean/std = 5.000000e+03 / 2.000000e+04 / 1.099145e+04 / 4.783530e+03
+    pred min/max/mean/std = 5.279418e+03 / 2.047857e+04 / 1.067645e+04 / 3.466419e+03
+- C:
+    true min/max/mean/std = 8.000000e-07 / 3.200000e-06 / 1.759750e-06 / 7.481065e-07
+    pred min/max/mean/std = 8.096897e-07 / 3.130860e-06 / 1.686492e-06 / 5.808552e-07
+
+
+Time_FFT
+(torch_gpu) pc_ai@PCAI:/mnt/c/Users/samue/Documents/AI-Assisted_Implementation_of_a_Digital-Twin/Digital_Twin_Calibration/src/dtcalib/deep_learning$ python3 inference.py   --checkpoint models/prob_cnn_2026-04-30_17-28-24_best.pth   --root-dir ../../../data/LP_DATASET_R1_R2_C   --split-json ./splits/rc_r1r2c_nested_fold0.json   --device cuda   --aggregate mean --n-samples 200 --hybrid-select --
+hybrid-n-candidates 200
+Checkpoint : models/prob_cnn_2026-04-30_17-28-24_best.pth
+Root dir   : ../../../data/LP_DATASET_R1_R2_C
+Split JSON : splits/rc_r1r2c_nested_fold0.json
+Device     : cuda
+Aggregate  : mean
+/mnt/c/Users/samue/Documents/AI-Assisted_Implementation_of_a_Digital-Twin/Digital_Twin_Calibration/src/dtcalib/calibration.py:876: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.                                                 lob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.seriali
+[1] Sample-level metrics
+- R2:
+    RMSE = 3.089627e+03
+    MAE  = 2.284700e+03
+    MAPE = 20.305 %
+- C:
+    RMSE = 4.288806e-07
+    MAE  = 3.355057e-07
+    MAPE = 21.866 %
+
+[2] Aggregated metrics by true parameter combination
+- Aggregation = mean
+- #groups     = 91
+- R2:
+    RMSE = 2.927366e+03
+    MAE  = 2.185460e+03
+    MAPE = 19.705 %
+- C:
+    RMSE = 4.156511e-07
+    MAE  = 3.264750e-07
+    MAPE = 20.743 %
+
+[Probabilistic evaluation]
+- R2:
+    mean predicted std = 2.632592e+03
+    corr(abs_error, pred_std) = 0.5294
+    empirical 95% coverage = 0.987
+    mean 95% interval width = 9.995548e+03
+    Gaussian NLL norm = 0.710447
+- C:
+    mean predicted std = 4.285194e-07
+    corr(abs_error, pred_std) = 0.5530
+    empirical 95% coverage = 0.996
+    mean 95% interval width = 1.626080e-06
+    Gaussian NLL norm = 0.690691
+
+[Hybrid physics-based selection]
+- R2:
+    RMSE selected = 8.158376e+02
+    MAE selected  = 4.368708e+02
+    MAPE selected = 3.620 %
+- C:
+    RMSE selected = 6.635555e-08
+    MAE selected  = 3.647841e-08
+    MAPE selected = 2.262 %
+
+[3] Sample-level prediction summary
+- R2:
+    true min/max/mean/std = 5.000000e+03 / 2.000000e+04 / 1.117958e+04 / 4.818882e+03
+    pred min/max/mean/std = 4.934960e+03 / 1.962702e+04 / 1.032274e+04 / 3.509126e+03
+- C:
+    true min/max/mean/std = 8.000000e-07 / 3.200000e-06 / 1.681413e-06 / 7.174227e-07
+    pred min/max/mean/std = 8.136875e-07 / 3.108445e-06 / 1.670553e-06 / 5.668131e-07
+
+[4] Aggregated prediction summary
+- R2:
+    true min/max/mean/std = 5.000000e+03 / 2.000000e+04 / 1.107411e+04 / 4.812438e+03
+    pred min/max/mean/std = 5.180676e+03 / 1.890944e+04 / 1.034035e+04 / 3.416927e+03
+- C:
+    true min/max/mean/std = 8.000000e-07 / 3.200000e-06 / 1.695799e-06 / 7.293312e-07
+    pred min/max/mean/std = 8.451030e-07 / 2.958160e-06 / 1.663743e-06 / 5.494451e-07
+
+[5] CSV saved (sample-level) : models/prob_cnn_2026-04-30_17-28-24_best_test_predictions_per_sample.csv
