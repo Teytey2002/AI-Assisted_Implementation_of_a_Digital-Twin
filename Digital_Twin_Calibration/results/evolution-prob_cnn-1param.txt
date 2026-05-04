@@ -1,0 +1,213 @@
+Time
+(torch_gpu) xxxx@TeyteyCase:/mnt/c/Users/theod/OneDrive/Documents/ULB/Ma2/TFE/AI-Assisted_Implementation_of_a_Digital-Twin/Digital_Twin_Calibration/src/dtcalib/deep_learning$ python3 inference.py   --checkpoint models/prob_cnn_2026-04-30_13-59-09_best.pth   --root-dir ../../../data/LP_DATASET_R1_R2_C   --split-json ./splits/rc_r1r2c_nested_fold0.json   --device cuda   --aggregate mean --n-samples 200 --hybrid-selec --hybrid-n-candidates 200
+Checkpoint : models/prob_cnn_2026-04-30_13-59-09_best.pth
+Root dir   : ../../../data/LP_DATASET_R1_R2_C
+Split JSON : splits/rc_r1r2c_nested_fold0.json
+Device     : cuda
+Aggregate  : mean
+Calibrated params : ('C',)
+Transform map     : {'C': 'log'}
+n_train=25600 | n_val=6400 | n_test=8000
+
+[1] Sample-level metrics
+- C:
+    RMSE = 4.404536e-07
+    MAE  = 3.452859e-07
+    MAPE = 22.634 %
+
+[2] Aggregated metrics by true parameter combination
+- Aggregation = mean
+- #groups     = 10
+- C:
+    RMSE = 2.956374e-07
+    MAE  = 2.461417e-07
+    MAPE = 15.835 %
+
+[Probabilistic evaluation]
+- C:
+    mean predicted std = 4.276290e-07
+    corr(abs_error, pred_std) = 0.5756
+    empirical 95% coverage = 0.982
+    mean 95% interval width = 1.624024e-06
+    Gaussian NLL norm = 0.724980
+
+[Hybrid physics-based selection]
+- C:
+    RMSE selected = 8.316738e-09
+    MAE selected  = 4.599329e-09
+    MAPE selected = 0.287 %
+
+[3] Sample-level prediction summary
+- C:
+    true min/max/mean/std = 8.000000e-07 / 3.200000e-06 / 1.681413e-06 / 7.174227e-07
+    pred min/max/mean/std = 7.734987e-07 / 3.267093e-06 / 1.684180e-06 / 5.693469e-07
+
+[4] Aggregated prediction summary
+- C:
+    true min/max/mean/std = 8.000000e-07 / 3.200000e-06 / 1.761190e-06 / 7.635687e-07
+    pred min/max/mean/std = 1.084074e-06 / 2.574104e-06 / 1.734125e-06 / 4.764505e-07
+
+
+
+FFT
+(torch_gpu) xxxx@TeyteyCase:/mnt/c/Users/theod/OneDrive/Documents/ULB/Ma2/TFE/AI-Assisted_Implementation_of_a_Digital-Twin/Digital_Twin_Calibration/src/dtcalib/deep_learning$ python3 inference.py   --checkpoint models/prob_cnn_2026-04-30_14-16-37_best.pth   --root-dir ../../../data/LP_DATASET_R1_R2_C   --split-json ./splits/rc_r1r2c_nested_fold0.json   --device cuda   --aggregate mean --n-samples 200 --hybrid-selec --hybrid-n-candidates 200
+Checkpoint : models/prob_cnn_2026-04-30_14-16-37_best.pth
+Root dir   : ../../../data/LP_DATASET_R1_R2_C
+Split JSON : splits/rc_r1r2c_nested_fold0.json
+Device     : cuda
+Aggregate  : mean
+Calibrated params : ('C',)
+Transform map     : {'C': 'log'}
+n_train=25600 | n_val=6400 | n_test=8000
+
+[1] Sample-level metrics
+- C:
+    RMSE = 4.373318e-07
+    MAE  = 3.442429e-07
+    MAPE = 22.707 %
+
+[2] Aggregated metrics by true parameter combination
+- Aggregation = mean
+- #groups     = 10
+- C:
+    RMSE = 2.814321e-07
+    MAE  = 2.362028e-07
+    MAPE = 15.470 %
+
+[Probabilistic evaluation]
+- C:
+    mean predicted std = 4.215535e-07
+    corr(abs_error, pred_std) = 0.5842
+    empirical 95% coverage = 0.982
+    mean 95% interval width = 1.600960e-06
+    Gaussian NLL norm = 0.701177
+
+[Hybrid physics-based selection]
+- C:
+    RMSE selected = 8.056932e-09
+    MAE selected  = 4.536984e-09
+    MAPE selected = 0.290 %
+
+[3] Sample-level prediction summary
+- C:
+    true min/max/mean/std = 8.000000e-07 / 3.200000e-06 / 1.681413e-06 / 7.174227e-07
+    pred min/max/mean/std = 7.980118e-07 / 3.163050e-06 / 1.692532e-06 / 5.836928e-07
+
+[4] Aggregated prediction summary
+- C:
+    true min/max/mean/std = 8.000000e-07 / 3.200000e-06 / 1.761190e-06 / 7.635687e-07
+    pred min/max/mean/std = 1.076396e-06 / 2.610178e-06 / 1.744522e-06 / 4.915386e-07
+
+[5] CSV saved (sample-level) : models/prob_cnn_2026-04-30_14-16-37_best_test_predictions_per_sample.csv
+[5] CSV saved (group-level)  : models/prob_cnn_2026-04-30_14-16-37_best_test_predictions_per_group_mean.csv
+
+
+
+
+FFT_Grouped
+(torch_gpu) xxxx@TeyteyCase:/mnt/c/Users/theod/OneDrive/Documents/ULB/Ma2/TFE/AI-Assisted_Implementation_of_a_Digital-Twin/Digital_Twin_Calibration/src/dtcalib/deep_learning$ python3 inference.py   --checkpoint models/prob_cnn_2026-04-30_15-45-57_best.pth   --root-dir ../../../data/LP_DATASET_R1_R2_C   --split-json ./splits/rc_r1r2c_fft
+_grouped_fold0.json   --device cuda   --aggregate mean --n-samples 200 --hybrid-selec --hybrid-n-candidates 200
+Checkpoint : models/prob_cnn_2026-04-30_15-45-57_best.pth
+Root dir   : ../../../data/LP_DATASET_R1_R2_C
+Split JSON : splits/rc_r1r2c_fft_grouped_fold0.json
+Device     : cuda
+Aggregate  : mean
+Calibrated params : ('C',)
+Transform map     : {'C': 'log'}
+n_train=640 | n_val=160 | n_test=200
+
+[1] Sample-level metrics
+- C:
+    RMSE = 4.488979e-07
+    MAE  = 3.397519e-07
+    MAPE = 19.646 %
+
+[2] Aggregated metrics by true parameter combination
+- Aggregation = mean
+- #groups     = 10
+- C:
+    RMSE = 2.889310e-07
+    MAE  = 2.021386e-07
+    MAPE = 11.351 %
+
+[Probabilistic evaluation]
+- C:
+    mean predicted std = 3.877551e-07
+    corr(abs_error, pred_std) = 0.4704
+    empirical 95% coverage = 0.980
+    mean 95% interval width = 1.479221e-06
+    Gaussian NLL norm = 0.697815
+
+[Hybrid physics-based selection]
+- C:
+    RMSE selected = 2.029729e-08
+    MAE selected  = 5.931384e-09
+    MAPE selected = 0.297 %
+
+[3] Sample-level prediction summary
+- C:
+    true min/max/mean/std = 8.000000e-07 / 3.200000e-06 / 1.789482e-06 / 7.557131e-07
+    pred min/max/mean/std = 7.947528e-07 / 3.045527e-06 / 1.684215e-06 / 6.237447e-07
+
+[4] Aggregated prediction summary
+- C:
+    true min/max/mean/std = 8.000000e-07 / 3.200000e-06 / 1.761190e-06 / 7.635687e-07
+    pred min/max/mean/std = 1.014415e-06 / 2.441482e-06 / 1.660896e-06 / 5.160532e-07
+
+[5] CSV saved (sample-level) : models/prob_cnn_2026-04-30_15-45-57_best_test_predictions_per_sample.csv
+[5] CSV saved (group-level)  : models/prob_cnn_2026-04-30_15-45-57_best_test_predictions_per_group_mean.csv
+
+
+
+Time_FFT
+(torch_gpu) xxxx@TeyteyCase:/mnt/c/Users/theod/OneDrive/Documents/ULB/Ma2/TFE/AI-Assisted_Implementation_of_a_Digital-Twin/Digital_Twin_Calibration/src/dtcalib/deep_learning$ python3 inference.py   --checkpoint models/prob_cnn_2026-04-30_17-27-03_best.pth   --root-dir ../../../data/LP_DATASET_R1_R2_C   --split-json ./splits/rc_r1r2c_nes
+ted_fold0.json   --device cuda   --aggregate mean --n-samples 200 --hybrid-selec --hybrid-n-candidates 200
+Checkpoint : models/prob_cnn_2026-04-30_17-27-03_best.pth
+Root dir   : ../../../data/LP_DATASET_R1_R2_C
+Split JSON : splits/rc_r1r2c_nested_fold0.json
+Device     : cuda
+Aggregate  : mean
+Calibrated params : ('C',)
+Transform map     : {'C': 'log'}
+n_train=25600 | n_val=6400 | n_test=8000
+
+[1] Sample-level metrics
+- C:
+    RMSE = 4.329776e-07
+    MAE  = 3.389061e-07
+    MAPE = 22.088 %
+
+[2] Aggregated metrics by true parameter combination
+- Aggregation = mean
+- #groups     = 10
+- C:
+    RMSE = 2.852035e-07
+    MAE  = 2.362877e-07
+    MAPE = 15.096 %
+
+[Probabilistic evaluation]
+- C:
+    mean predicted std = 4.195792e-07
+    corr(abs_error, pred_std) = 0.5679
+    empirical 95% coverage = 0.985
+    mean 95% interval width = 1.592516e-06
+    Gaussian NLL norm = 0.696446
+
+[Hybrid physics-based selection]
+- C:
+    RMSE selected = 8.039031e-09
+    MAE selected  = 4.497626e-09
+    MAPE selected = 0.282 %
+
+[3] Sample-level prediction summary
+- C:
+    true min/max/mean/std = 8.000000e-07 / 3.200000e-06 / 1.681413e-06 / 7.174227e-07
+    pred min/max/mean/std = 7.854915e-07 / 3.075015e-06 / 1.677880e-06 / 5.765203e-07
+
+[4] Aggregated prediction summary
+- C:
+    true min/max/mean/std = 8.000000e-07 / 3.200000e-06 / 1.761190e-06 / 7.635687e-07
+    pred min/max/mean/std = 1.071440e-06 / 2.590755e-06 / 1.729010e-06 / 4.875197e-07
+
+[5] CSV saved (sample-level) : models/prob_cnn_2026-04-30_17-27-03_best_test_predictions_per_sample.csv
+[5] CSV saved (group-level)  : models/prob_cnn_2026-04-30_17-27-03_best_test_predictions_per_group_mean.csv

@@ -72,6 +72,21 @@ Parameters used :
 y stats: min= -2.49931903 max= 2.49931901 std= 1.7653209200855435
 u stats: min= -5.0 max= 5.0 std= 3.531122757068164
 
+Calibration setup
+calibrated_params = ('R1', 'R2', 'C')
+fixed_params = {}
+initialGuess = [3.0e+03 1.5e+04 3.0e-06]
+bounds = (array([1.e+02, 1.e+02, 1.e-09]), array([1.e+07, 1.e+07, 1.e-02]))
+prior_mean = [1.e+04 1.e+04 1.e-06]
+prior_std = [1.e+03 1.e+03 5.e-07]
+CV folds: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 99/99 [04:17<00:00,  2.60s/it]
+CV summary: {'rmse_mean': 0.13215582177700164, 'rmse_std': 0.06844768417297908, 'nmse_mean': 0.007781172435526431, 'nmse_std': 0.0060126113533875295}
+[held-out=dataset_+c_1p0032em06__exp_lp_002_f0p523808hz__results_lp_002_f0p523808hz] theta_hat=[1.02095324e+04 9.80919820e+03 8.35333890e-07] rmse=0.247972 nmse=0.0197313
+[held-out=dataset_+c_1p0032em06__exp_lp_003_f0p548749hz__results_lp_003_f0p548749hz] theta_hat=[1.02095410e+04 9.80918322e+03 8.35333369e-07] rmse=0.246613 nmse=0.0195162
+[held-out=dataset_+c_1p0032em06__exp_lp_004_f0p574878hz__results_lp_004_f0p574878hz] theta_hat=[1.02095469e+04 9.80916507e+03 8.35333179e-07] rmse=0.24519 nmse=0.0192922
+[held-out=dataset_+c_1p0032em06__exp_lp_005_f0p602252hz__results_lp_005_f0p602252hz] theta_hat=[1.02095487e+04 9.80914254e+03 8.35333471e-07] rmse=0.243701 nmse=0.0190592
+[held-out=dataset_+c_1p0032em06__exp_lp_006_f0p630928hz__results_lp_006_f0p630928hz] theta_hat=[1.02095462e+04 9.80911547e+03 8.35334323e-07] rmse=0.242143 nmse=0.018817
+
 
 
 
