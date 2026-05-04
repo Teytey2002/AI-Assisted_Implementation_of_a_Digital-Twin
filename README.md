@@ -72,7 +72,7 @@ src/dtcalib/
 
 ### 1. Clone the repository
 ```bash
-git clone <YOUR_REPO_URL>
+git clone https://github.com/Teytey2002/AI-Assisted_Implementation_of_a_Digital-Twin.git
 cd AI-Assisted_Implementation_of_a_Digital-Twin
 ```
 
