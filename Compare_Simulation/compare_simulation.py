@@ -22,25 +22,25 @@ def find_header_idx(file_path: Path) -> int:
 # =========================================================
 # 1) Charger le fichier exporté depuis LTspice
 # =========================================================
-#file_path = Path("./R1_10_R2_10_C_22micro.txt")   # adapte si nécessaire
-#
-#df = pd.read_csv(file_path, sep=r"\s+", engine="python")
-#
-#print("Colonnes trouvées :", df.columns.tolist())
-#print(df.head())
+file_path_lt = Path("./R1_10_R2_10_C_22micro.txt")   # adapte si nécessaire
+
+df_lt = pd.read_csv(file_path_lt, sep=r"\s+", engine="python")
+
+print("Colonnes trouvées :", df_lt.columns.tolist())
+print(df_lt.head())
 
 # =========================================================
 # 1) Charger CSV généré depuis EcoSimPro
 # =========================================================
-file_path = Path("r1_10_r2_10_c22micro.rpt")  # 
+file_path_eco = Path("r1_10_r2_10_c22micro.rpt")  # 
 
-header_idx = find_header_idx(file_path)
+header_idx = find_header_idx(file_path_eco)
 
-df = pd.read_csv(file_path, skiprows=header_idx, sep="\t")
-df.columns = [normalize_col(c) for c in df.columns]
+df_eco = pd.read_csv(file_path_eco, skiprows=header_idx, sep="\t")
+df_eco.columns = [normalize_col(c) for c in df_eco.columns]
 
-print("Colonnes trouvées :", df.columns.tolist())
-print(df.head())
+print("Colonnes trouvées :", df_eco.columns.tolist())
+print(df_eco.head())
 
 
 # =========================================================
@@ -51,14 +51,14 @@ print(df.head())
 # - V(n001) = Vout
 
 # For Ltpice
-#t = df["time"].to_numpy(dtype=float)
-#vin_lt = df["V(n002)"].to_numpy(dtype=float)
-#vout_lt = df["V(n001)"].to_numpy(dtype=float)
+t_lt = df_lt["time"].to_numpy(dtype=float)
+vin_lt = df_lt["V(n002)"].to_numpy(dtype=float)
+vout_lt = df_lt["V(n001)"].to_numpy(dtype=float)
 
 # For EcoSimPro 
-t = df["TIME"].to_numpy(dtype=float)
-vin = df["Addition_2.s_out.signal[1]"].to_numpy(dtype=float)
-vout_eco = df["SensorVoltage_1.v"].to_numpy(dtype=float)
+t_Eco = df_eco["TIME"].to_numpy(dtype=float)
+vin_Eco = df_eco["Addition_2.s_out.signal[1]"].to_numpy(dtype=float)
+vout_Eco = df_eco["SensorVoltage_1.v"].to_numpy(dtype=float)
 
 
 # =========================================================
@@ -85,7 +85,7 @@ theta = np.array([C], dtype=float)
 # =========================================================
 # 4) Simuler avec exactement le même temps et le même input
 # =========================================================
-result = simulator.simulate(t=t, u=vin, theta=theta)
+result = simulator.simulate(t=t_lt, u=vin_lt, theta=theta)
 vout_py = result.y
 
 print("\nInfos auxiliaires du simulateur :")
@@ -96,7 +96,7 @@ for k, v in result.aux.items():
 # =========================================================
 # 5) Calculer les erreurs
 # =========================================================
-err = vout_py - vout_eco
+err = vout_py - vout_lt
 
 mae = np.mean(np.abs(err))
 rmse = np.sqrt(np.mean(err**2))
@@ -112,7 +112,7 @@ print(f"MAXAE = {max_abs:.6e}")
 # 6) Tracés
 # =========================================================
 plt.figure(figsize=(10, 4))
-plt.plot(t, vin, label="Vin LTspice")
+plt.plot(t_lt, vin_lt, label="Vin LTspice")
 plt.xlabel("Time [s]")
 plt.ylabel("Voltage [V]")
 plt.title("Input signal")
@@ -122,8 +122,8 @@ plt.tight_layout()
 plt.show()
 
 plt.figure(figsize=(10, 4))
-plt.plot(t, vout_eco, label="Vout LTspice")
-plt.plot(t, vout_py, "--", label="Vout Python")
+plt.plot(t_lt, vout_lt, label="Vout LTspice")
+plt.plot(t_lt, vout_py, "--", label="Vout Python")
 plt.xlabel("Time [s]")
 plt.ylabel("Voltage [V]")
 plt.title("Comparison of output")
@@ -133,10 +133,22 @@ plt.tight_layout()
 plt.show()
 
 plt.figure(figsize=(10, 4))
-plt.plot(t, err, label="Error = Python - EcoSimPro")
+plt.plot(t_lt, err, label="Error = Python - EcoSimPro")
 plt.xlabel("Time [s]")
 plt.ylabel("Error [V]")
 plt.title("Pointwise error")
+plt.grid(True)
+plt.legend()
+plt.tight_layout()
+plt.show()
+
+plt.figure(figsize=(10, 4))
+plt.plot(t_Eco, vout_Eco, label="Vout EcoSimPro")
+plt.plot(t_lt, vout_lt, label="Vout LTspice")
+plt.plot(t_lt, vout_py, "--", label="Vout Python")
+plt.xlabel("Time [s]")
+plt.ylabel("Voltage [V]")
+plt.title("Comparison of output")
 plt.grid(True)
 plt.legend()
 plt.tight_layout()
