@@ -4,7 +4,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import re
 
-from dtcalib.simulation import LowPassR1CR2Simulator
+from dtcalib.simulation import LowPassR1CR2Simulator, ThreeStageRCLadderSimulator
 
 def normalize_col(c: str) -> str:
     c = c.lstrip("#").strip()
@@ -22,7 +22,7 @@ def find_header_idx(file_path: Path) -> int:
 # =========================================================
 # 1) Charger le fichier exporté depuis LTspice
 # =========================================================
-file_path_lt = Path("./R1_10_R2_10_C_22micro.txt")   # adapte si nécessaire
+file_path_lt = Path("./threeStageSimulator.txt")   # adapte si nécessaire
 
 df_lt = pd.read_csv(file_path_lt, sep=r"\s+", engine="python")
 
@@ -32,15 +32,15 @@ print(df_lt.head())
 # =========================================================
 # 1) Charger CSV généré depuis EcoSimPro
 # =========================================================
-file_path_eco = Path("r1_10_r2_10_c22micro.rpt")  # 
-
-header_idx = find_header_idx(file_path_eco)
-
-df_eco = pd.read_csv(file_path_eco, skiprows=header_idx, sep="\t")
-df_eco.columns = [normalize_col(c) for c in df_eco.columns]
-
-print("Colonnes trouvées :", df_eco.columns.tolist())
-print(df_eco.head())
+#file_path_eco = Path("r1_10_r2_10_c22micro.rpt")  # 
+#
+#header_idx = find_header_idx(file_path_eco)
+#
+#df_eco = pd.read_csv(file_path_eco, skiprows=header_idx, sep="\t")
+#df_eco.columns = [normalize_col(c) for c in df_eco.columns]
+#
+#print("Colonnes trouvées :", df_eco.columns.tolist())
+#print(df_eco.head())
 
 
 # =========================================================
@@ -52,13 +52,13 @@ print(df_eco.head())
 
 # For Ltpice
 t_lt = df_lt["time"].to_numpy(dtype=float)
-vin_lt = df_lt["V(n002)"].to_numpy(dtype=float)
-vout_lt = df_lt["V(n001)"].to_numpy(dtype=float)
+vin_lt = df_lt["V(vin)"].to_numpy(dtype=float)
+vout_lt = df_lt["V(vout)"].to_numpy(dtype=float)
 
 # For EcoSimPro 
-t_Eco = df_eco["TIME"].to_numpy(dtype=float)
-vin_Eco = df_eco["Addition_2.s_out.signal[1]"].to_numpy(dtype=float)
-vout_Eco = df_eco["SensorVoltage_1.v"].to_numpy(dtype=float)
+#t_Eco = df_eco["TIME"].to_numpy(dtype=float)
+#vin_Eco = df_eco["Addition_2.s_out.signal[1]"].to_numpy(dtype=float)
+#vout_Eco = df_eco["SensorVoltage_1.v"].to_numpy(dtype=float)
 
 
 # =========================================================
@@ -66,20 +66,28 @@ vout_Eco = df_eco["SensorVoltage_1.v"].to_numpy(dtype=float)
 # =========================================================
 # Donc choisis ici les vraies valeurs utilisées dans LTspice.
 
-R1 = 10.0       
-R2 = 10.0       
-C = 22e-6
+R1 = 10.0
+R2 = 47.5
+R3 = 22.1
+R4 = 15.0
+R5 = 33.2
+R6 = 68.1
+R7 = 100.0
 
-simulator = LowPassR1CR2Simulator(
-    calibrated_params=("C",),
-    fixed_params={
-        "R1": R1,
-        "R2": R2,
-    },
-    y0_mode="dc_from_u0",
+C1 = 1e-6
+C2 = 10e-6
+C3 = 15e-6
+
+simulator = ThreeStageRCLadderSimulator(
+    calibrated_params=("R1", "R2", "R3", "R4", "R5", "R6", "R7", "C1", "C2", "C3"),
+    fixed_params={},
+    y0_mode="zero",
 )
 
-theta = np.array([C], dtype=float)
+theta = np.array([
+    R1, R2, R3, R4, R5, R6, R7,
+    C1, C2, C3,
+], dtype=float)
 
 
 # =========================================================
@@ -133,7 +141,7 @@ plt.tight_layout()
 plt.show()
 
 plt.figure(figsize=(10, 4))
-plt.plot(t_lt, err, label="Error = Python - EcoSimPro")
+plt.plot(t_lt, err, label="Error = Python - LTspice")
 plt.xlabel("Time [s]")
 plt.ylabel("Error [V]")
 plt.title("Pointwise error")
@@ -142,14 +150,14 @@ plt.legend()
 plt.tight_layout()
 plt.show()
 
-plt.figure(figsize=(10, 4))
-plt.plot(t_Eco, vout_Eco, label="Vout EcoSimPro")
-plt.plot(t_lt, vout_lt, label="Vout LTspice")
-plt.plot(t_lt, vout_py, "--", label="Vout Python")
-plt.xlabel("Time [s]")
-plt.ylabel("Voltage [V]")
-plt.title("Comparison of output")
-plt.grid(True)
-plt.legend()
-plt.tight_layout()
-plt.show()
+#plt.figure(figsize=(10, 4))
+#plt.plot(t_Eco, vout_Eco, label="Vout EcoSimPro")
+#plt.plot(t_lt, vout_lt, label="Vout LTspice")
+#plt.plot(t_lt, vout_py, "--", label="Vout Python")
+#plt.xlabel("Time [s]")
+#plt.ylabel("Voltage [V]")
+#plt.title("Comparison of output")
+#plt.grid(True)
+#plt.legend()
+#plt.tight_layout()
+#plt.show()
