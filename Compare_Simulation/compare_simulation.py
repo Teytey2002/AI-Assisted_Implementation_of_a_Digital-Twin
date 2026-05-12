@@ -4,7 +4,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import re
 
-from dtcalib.simulation import LowPassR1CR2Simulator, ThreeStageRCLadderSimulator
+from dtcalib.simulation import LowPassR1CR2Simulator, ThreeStageRCLadderSimulator, ThreeStageRLCLadderSimulator
 
 def normalize_col(c: str) -> str:
     c = c.lstrip("#").strip()
@@ -22,7 +22,7 @@ def find_header_idx(file_path: Path) -> int:
 # =========================================================
 # 1) Charger le fichier exporté depuis LTspice
 # =========================================================
-file_path_lt = Path("./threeStageSimulator.txt")   # adapte si nécessaire
+file_path_lt = Path("./threeStageRLC50hz.txt")   # adapte si nécessaire
 
 df_lt = pd.read_csv(file_path_lt, sep=r"\s+", engine="python")
 
@@ -67,26 +67,35 @@ vout_lt = df_lt["V(vout)"].to_numpy(dtype=float)
 # Donc choisis ici les vraies valeurs utilisées dans LTspice.
 
 R1 = 10.0
-R2 = 47.5
+L1 = 10e-3
+R2 = 42.2
+C1 = 1e-6
+
 R3 = 22.1
+L2 = 22e-3
 R4 = 15.0
+C2 = 10e-6
+
 R5 = 33.2
+L3 = 33e-3
 R6 = 68.1
 R7 = 100.0
-
-C1 = 1e-6
-C2 = 10e-6
 C3 = 15e-6
 
-simulator = ThreeStageRCLadderSimulator(
-    calibrated_params=("R1", "R2", "R3", "R4", "R5", "R6", "R7", "C1", "C2", "C3"),
+simulator = ThreeStageRLCLadderSimulator(
+    calibrated_params=(
+        "R1", "L1", "R2", "C1",
+        "R3", "L2", "R4", "C2",
+        "R5", "L3", "R6", "C3", "R7",
+    ),
     fixed_params={},
     y0_mode="zero",
 )
 
 theta = np.array([
-    R1, R2, R3, R4, R5, R6, R7,
-    C1, C2, C3,
+    R1, L1, R2, C1,
+    R3, L2, R4, C2,
+    R5, L3, R6, C3, R7,
 ], dtype=float)
 
 
