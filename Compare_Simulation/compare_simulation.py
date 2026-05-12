@@ -4,7 +4,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import re
 
-from dtcalib.simulation import LowPassR1CR2Simulator, ThreeStageRCLadderSimulator, ThreeStageRLCLadderSimulator
+from dtcalib.simulation import LowPassR1CR2Simulator, ThreeStageRCLadderSimulator, ThreeStageRLCLadderSimulator, DiodeClippedRCSimulator
 
 def normalize_col(c: str) -> str:
     c = c.lstrip("#").strip()
@@ -22,7 +22,7 @@ def find_header_idx(file_path: Path) -> int:
 # =========================================================
 # 1) Charger le fichier exporté depuis LTspice
 # =========================================================
-file_path_lt = Path("./threeStageRLC50hz.txt")   # adapte si nécessaire
+file_path_lt = Path("./DiodeClippedRC.txt")   # adapte si nécessaire
 
 df_lt = pd.read_csv(file_path_lt, sep=r"\s+", engine="python")
 
@@ -66,36 +66,22 @@ vout_lt = df_lt["V(vout)"].to_numpy(dtype=float)
 # =========================================================
 # Donc choisis ici les vraies valeurs utilisées dans LTspice.
 
-R1 = 10.0
-L1 = 10e-3
-R2 = 42.2
-C1 = 1e-6
+R1 = 1_000.0
+C1 = 10e-6
 
-R3 = 22.1
-L2 = 22e-3
-R4 = 15.0
-C2 = 10e-6
+IS = 2.52e-9
+N = 1.75
+VT = 25.85e-3
+RS = 0.568
 
-R5 = 33.2
-L3 = 33e-3
-R6 = 68.1
-R7 = 100.0
-C3 = 15e-6
-
-simulator = ThreeStageRLCLadderSimulator(
-    calibrated_params=(
-        "R1", "L1", "R2", "C1",
-        "R3", "L2", "R4", "C2",
-        "R5", "L3", "R6", "C3", "R7",
-    ),
+simulator = DiodeClippedRCSimulator(
+    calibrated_params=("R1", "C1", "IS", "N", "VT", "RS"),
     fixed_params={},
     y0_mode="zero",
 )
 
 theta = np.array([
-    R1, L1, R2, C1,
-    R3, L2, R4, C2,
-    R5, L3, R6, C3, R7,
+    R1, C1, IS, N, VT, RS,
 ], dtype=float)
 
 
