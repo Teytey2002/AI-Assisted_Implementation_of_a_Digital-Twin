@@ -77,3 +77,47 @@ class LeaveOneExperimentOutCV:
             )
 
         return CrossValidationResult(folds=folds)
+
+class FullDatasetCalibration:
+    """
+    Calibration on the full dataset, then evaluation on each experiment.
+
+    Useful for expensive optimizers such as GA and PSO, where full LOO-CV
+    would be computationally too expensive.
+    """
+
+    def __init__(self, simulator: Simulator, calibrator: LeastSquaresCalibrator) -> None:
+        self._sim = simulator
+        self._cal = calibrator
+
+    def run(
+        self,
+        dataset: ExperimentsDataset,
+        *,
+        theta0: np.ndarray,
+        bounds: Optional[Tuple[np.ndarray, np.ndarray]] = None,
+        max_nfev: Optional[int] = None,
+    ) -> CrossValidationResult:
+        train_report = self._cal.calibrate(
+            dataset.experiments,
+            theta0=theta0,
+            bounds=bounds,
+            max_nfev=max_nfev,
+        )
+
+        folds: List[FoldResult] = []
+
+        for exp in tqdm(dataset.experiments, desc="Full-dataset eval"):
+            yhat = self._sim.simulate(exp.t, exp.u, train_report.theta_hat).y
+            test_metrics = Metrics.compute(exp.y, yhat)
+
+            folds.append(
+                FoldResult(
+                    held_out=exp.name,
+                    theta_hat=train_report.theta_hat,
+                    train_report=train_report,
+                    test_metrics=test_metrics,
+                )
+            )
+
+        return CrossValidationResult(folds=folds)
