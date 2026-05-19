@@ -31,12 +31,63 @@ from dtcalib import metrics
 import numpy as np
 import pandas as pd
 import torch
+import json
 
 from dtcalib.calibration import RCNeuralCalibrator
-from dtcalib.simulation import LowPassR1CR2Simulator
+from dtcalib.simulation import LowPassR1CR2Simulator, ThreeStageRCLadderSimulator, ThreeStageRLCLadderSimulator, DiodeClippedRCSimulator
 from dtcalib.deep_learning.dataset import RCSignalDataset, TargetSpec
 from dtcalib.deep_learning.splits_utils import load_split, get_indices
 from dtcalib.metrics import Metrics
+
+def load_metadata(root_dir: Path) -> dict[str, Any]:
+    metadata_path = root_dir / "metadata.json"
+
+    if not metadata_path.exists():
+        raise FileNotFoundError(f"metadata.json not found: {metadata_path}")
+
+    with open(metadata_path, "r") as f:
+        return json.load(f)
+
+
+def build_simulator_from_metadata(
+    *,
+    metadata: dict[str, Any],
+    calibrated_params: tuple[str, ...],
+    param_dict: dict[str, float],
+):
+    circuit = metadata["circuit"]
+    all_params = tuple(metadata["all_params"])
+
+    fixed_params = {
+        p: float(param_dict[p])
+        for p in all_params
+        if p not in calibrated_params
+    }
+
+    if circuit == "ThreeStageRC":
+        return ThreeStageRCLadderSimulator(
+            calibrated_params=calibrated_params,
+            fixed_params=fixed_params,
+            y0_mode="zero",
+        )
+
+    if circuit == "ThreeStageRLC":
+        return ThreeStageRLCLadderSimulator(
+            calibrated_params=calibrated_params,
+            fixed_params=fixed_params,
+            y0_mode="zero",
+        )
+
+    if circuit == "DiodeClippedRC":
+        return DiodeClippedRCSimulator(
+            calibrated_params=calibrated_params,
+            fixed_params=fixed_params,
+            y0_mode="zero",
+            method="BDF",
+        )
+
+    raise ValueError(f"Unknown circuit in metadata: {circuit}")
+
 
 def _aggregate_array(values: np.ndarray, mode: str) -> float:
     if mode == "mean":
@@ -54,7 +105,7 @@ def run_inference(
     root_dir: str | Path,
     split_json_path: str | Path,
     device: str = "cuda",
-    aggregate: str = "mean",
+    aggregate: str = "median",
     save_csv: bool = True,
     manifest_name: str = "manifest.csv",
     n_samples: int = 0,
@@ -64,6 +115,7 @@ def run_inference(
     checkpoint_path = Path(checkpoint_path)
     root_dir = Path(root_dir)
     split_json_path = Path(split_json_path)
+    metadata = load_metadata(root_dir)
 
     device_t = torch.device(device if torch.cuda.is_available() else "cpu")
 
@@ -96,7 +148,7 @@ def run_inference(
         root_dir,
         target_spec=target_spec,
         manifest_name=manifest_name,
-        domain="time"
+        domain="fft_grouped"
     )
 
     dataset.set_normalization(
@@ -122,7 +174,13 @@ def run_inference(
     # ------------------------------------------------------------------
     # Sample-level inference
     # ------------------------------------------------------------------
-    for idx in test_idx:
+    for count, idx in enumerate(test_idx, start=1):
+        if count == 1 or count % 5 == 0:
+            print(
+                f"[Hybrid inference] {count}/{len(test_idx)} test groups",
+                flush=True,
+            )
+
         if dataset.domain == "fft_grouped":
             group_sample = dataset.grouped_samples[idx]
             param_dict = group_sample["param_dict"]
@@ -148,17 +206,17 @@ def run_inference(
         selected_vec = None
         selected_rmse = None
 
-        if hybrid_select and samples_vec is not None:
-            fixed_params = {
-                p: float(param_dict[p])
-                for p in ("R1", "R2", "C")
-                if p not in calibrated_params
-            }
+        if hybrid_select:
+            if samples_vec is None:
+                raise ValueError(
+                    "Hybrid selection requires probabilistic samples. "
+                    "Use a probabilistic checkpoint and set --n-samples > 0."
+                )
 
-            simulator = LowPassR1CR2Simulator(
+            simulator = build_simulator_from_metadata(
+                metadata=metadata,
                 calibrated_params=calibrated_params,
-                fixed_params=fixed_params,
-                y0_mode="dc_from_u0",
+                param_dict=param_dict,
             )
 
             candidate_samples = samples_vec[: int(hybrid_n_candidates)]
@@ -168,18 +226,21 @@ def run_inference(
 
             # ------------------------------------------------------------
             # Case 1: fft_grouped
-            # One candidate theta must be evaluated on all frequency CSVs
+            # One candidate theta is evaluated on all frequency CSVs
             # belonging to the same physical group.
             # ------------------------------------------------------------
             if dataset.domain == "fft_grouped":
+                group_sample = dataset.grouped_samples[idx]
                 eval_csv_paths = group_sample["csv_paths"]
 
                 for theta_candidate in candidate_samples:
+                    theta_candidate = np.asarray(theta_candidate, dtype=np.float64)
                     candidate_scores = []
 
                     for eval_csv_path in eval_csv_paths:
                         try:
                             df_sig = pd.read_csv(eval_csv_path)
+
                             time = df_sig.iloc[:, 0].to_numpy(dtype=np.float64)
                             vin = df_sig.iloc[:, 1].to_numpy(dtype=np.float64)
                             vout = df_sig.iloc[:, 2].to_numpy(dtype=np.float64)
@@ -187,10 +248,13 @@ def run_inference(
                             yhat = simulator.simulate(
                                 time,
                                 vin,
-                                np.asarray(theta_candidate, dtype=np.float64),
+                                theta_candidate,
                             ).y
 
-                            candidate_scores.append(Metrics.rmse(vout, yhat))
+                            score = Metrics.rmse(vout, yhat)
+
+                            if np.isfinite(score):
+                                candidate_scores.append(float(score))
 
                         except Exception:
                             continue
@@ -202,7 +266,7 @@ def run_inference(
 
                     if score < best_score:
                         best_score = score
-                        best_theta = np.asarray(theta_candidate, dtype=np.float64)
+                        best_theta = theta_candidate.copy()
 
             # ------------------------------------------------------------
             # Case 2: time / fft / time_fft
@@ -210,16 +274,19 @@ def run_inference(
             # ------------------------------------------------------------
             else:
                 df_sig = pd.read_csv(csv_path)
+
                 time = df_sig.iloc[:, 0].to_numpy(dtype=np.float64)
                 vin = df_sig.iloc[:, 1].to_numpy(dtype=np.float64)
                 vout = df_sig.iloc[:, 2].to_numpy(dtype=np.float64)
 
                 for theta_candidate in candidate_samples:
+                    theta_candidate = np.asarray(theta_candidate, dtype=np.float64)
+
                     try:
                         yhat = simulator.simulate(
                             time,
                             vin,
-                            np.asarray(theta_candidate, dtype=np.float64),
+                            theta_candidate,
                         ).y
 
                         score = Metrics.rmse(vout, yhat)
@@ -227,19 +294,20 @@ def run_inference(
                     except Exception:
                         continue
 
-                    if score < best_score:
+                    if np.isfinite(score) and score < best_score:
                         best_score = float(score)
-                        best_theta = np.asarray(theta_candidate, dtype=np.float64)
+                        best_theta = theta_candidate.copy()
 
             if best_theta is not None:
                 selected_vec = best_theta
                 selected_rmse = best_score
+
         row: dict[str, Any] = {
             "index": int(idx),
             "sample_name": sample_name,
             "csv_path": str(csv_path),
         }
-
+        
         # Store normalized ground truth and normalized probabilistic outputs.
         y_norm_true_np = y_norm_true.detach().cpu().numpy().astype(np.float64)
         mu_norm_np = pred.mean_norm.squeeze(0).astype(np.float64)

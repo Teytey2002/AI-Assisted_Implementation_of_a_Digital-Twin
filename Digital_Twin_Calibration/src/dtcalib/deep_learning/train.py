@@ -21,6 +21,7 @@ from dtcalib.deep_learning.model import RCInverseCNN, ProbabilisticRCInverseCNN,
 from dtcalib.deep_learning.dataset import RCSignalDataset, TargetSpec
 from dtcalib.deep_learning.splits_utils import load_split, get_indices
 from dtcalib.calibration import NormalizationStats
+import json
 
 # ------------------------------------------------------------
 # Reproducibility
@@ -51,6 +52,26 @@ def gaussian_nll_loss(
     loss = 0.5 * (log_var + (target - mu) ** 2 * inv_var)
     return loss.mean()
 
+# ------------------------------------------------------------
+# Load data
+# ------------------------------------------------------------
+def load_training_metadata(dataset_root: Path) -> tuple[tuple[str, ...], dict[str, str]]:
+    metadata_path = dataset_root / "metadata.json"
+
+    if not metadata_path.exists():
+        raise FileNotFoundError(f"metadata.json not found: {metadata_path}")
+
+    with open(metadata_path, "r") as f:
+        metadata = json.load(f)
+
+    calibrated_params = tuple(metadata["calibrated_params"])
+
+    transform_map = {
+        p: "log"
+        for p in calibrated_params
+    }
+
+    return calibrated_params, transform_map
 
 # ------------------------------------------------------------
 # Model factory
@@ -135,20 +156,20 @@ def train(
     patience = 25
     max_epochs = 300
 
-    # Modified if needed to train the model to predict differents number of parameters
-    #calibrated_params = ("R1", "R2", "C")
-    #transform_map = {"R1": "log", "R2": "log", "C": "log"}
-    #calibrated_params = ("R2", "C")
-    #transform_map = {"R2": "log", "C": "log"}
-    calibrated_params = ("C",)
-    transform_map = {"C": "log"}
-    target_spec = TargetSpec(calibrated_params=calibrated_params, transform_map=transform_map)
+    calibrated_params, transform_map = load_training_metadata(dataset_root)
 
+    target_spec = TargetSpec(
+        calibrated_params=calibrated_params,
+        transform_map=transform_map,
+    )
+
+    print(f"Calibrated params: {calibrated_params}")
+    print(f"Transform map    : {transform_map}")
 
     # -------------------------
     # Dataset
     # -------------------------
-    dataset = RCSignalDataset(dataset_root, target_spec=target_spec, manifest_name="manifest.csv", domain="time_fft")
+    dataset = RCSignalDataset(dataset_root, target_spec=target_spec, manifest_name="manifest.csv", domain="fft_grouped")
 
     payload = load_split(split_json_path)
     train_idx, val_idx, test_idx = get_indices(payload)
